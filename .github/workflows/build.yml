@@ -6,6 +6,9 @@
 name: build
 on: [pull_request, push]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-24.04
