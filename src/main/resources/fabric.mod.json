@@ -1,0 +1,38 @@
+{
+	"schemaVersion": 1,
+	"id": "flying-chests",
+	"version": "${version}",
+	"name": "Flying Chests",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "MIT",
+	"icon": "assets/flying-chests/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.fjjy.FlyingChests"
+		],
+		"client": [
+			"com.fjjy.FlyingChestsClient"
+		]
+	},
+	"mixins": [
+		"flying-chests.mixins.json",
+		{
+			"config": "flying-chests.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
