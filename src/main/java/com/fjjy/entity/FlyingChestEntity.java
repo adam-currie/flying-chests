@@ -28,8 +28,6 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 
 public class FlyingChestEntity extends PathfinderMob {
-	// Follow goal stops once the chest is within this radius of the owner.
-	private static final float CLOSE_ENOUGH_DISTANCE = 4.0F;
 	// Distance threshold where follow speed switches to the faster catch-up speed.
 	private static final float TOO_FAR_DISTANCE = 16.0F;
 	// Owner must remain within this range of the base station for following to stay active.
