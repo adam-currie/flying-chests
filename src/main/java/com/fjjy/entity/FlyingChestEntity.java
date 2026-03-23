@@ -26,18 +26,11 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
+import net.minecraft.util.Util;
 
 public class FlyingChestEntity extends PathfinderMob {
-	// Distance threshold where follow speed switches to the faster catch-up speed.
-	private static final float TOO_FAR_DISTANCE = 16.0F;
-	// Owner must remain within this range of the base station for following to stay active.
-	private static final float MAX_OWNER_RANGE_FROM_BASE = 32.0F;
-	// Regular follow speed used while the owner is nearby.
-	private static final double FOLLOW_SPEED_NEAR = 1.75D;
-	// Increased follow speed used when the chest lags far behind.
-	private static final double FOLLOW_SPEED_FAR = 2.25D;
-	// Speed used when returning to the base hover position.
-	private static final double RETURN_TO_BASE_SPEED = 2.25D;//todo: slow down near end of path
+	private static final float MAX_OWNER_RANGE_FROM_BASE = 36.0F;
 
 	private UUID ownerUuid;
 	private BlockPos baseStationPos;
@@ -210,15 +203,35 @@ public class FlyingChestEntity extends PathfinderMob {
 		@Override
 		public void tick() {
 			Player owner = this.mob.getNearbyOwner();
-			if (owner != null && --this.recalcTicks <= 0) {
-				this.recalcTicks = 10;
+			if (owner != null && --this.recalcTicks <= 0) {			
+				long targetDeltaSqr = (long) (getOwnerToTargetDistanceSqr(owner) + 2.0D);//adding extra to simulate a sphere not a point
+				long sysTime = Util.getNanos();
+
+				this.recalcTicks = (int) (sysTime % 64 / targetDeltaSqr) + 8;
+				
+				// chance to just stay still if still or stay going to the old spot, mostly when close
+				if (sysTime % (targetDeltaSqr+2) == 0) {
+					return;
+				}
+
 				this.mob.getLookControl().setLookAt(owner, 45.0F, 90.0F);
-				double distanceToTargetSqr = this.mob.distanceToSqr(owner);
-				double speed = distanceToTargetSqr > (double) (TOO_FAR_DISTANCE * TOO_FAR_DISTANCE)
-					? FOLLOW_SPEED_FAR
-					: FOLLOW_SPEED_NEAR;
-				this.mob.getNavigation().moveTo(owner.getX(), owner.getY() + 1.0D, owner.getZ(), speed);
+
+				double distanceToTargetSqr = this.mob.distanceToSqr(owner.position());
+				//random speed boost gets fed in linearly before the sqrting so it doesn't effect top speed/long range paths
+				double speedBoost = sysTime % 8;
+				double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr+speedBoost))/2;
+				double targetX = owner.getX() + 5*this.mob.getRandom().nextGaussian();
+				double targetZ = owner.getZ() + 5*this.mob.getRandom().nextGaussian();
+				this.mob.getNavigation().moveTo(targetX, owner.getY() + 1.0D, targetZ, speed);
 			}
+		}
+
+		private double getOwnerToTargetDistanceSqr(@NotNull Player owner) {
+			BlockPos targetPos = this.mob.getNavigation().getTargetPos();
+			if (targetPos == null) {
+				targetPos = this.mob.blockPosition();
+			}
+			return owner.distanceToSqr(Vec3.atCenterOf(targetPos));
 		}
 	}
 
@@ -243,8 +256,10 @@ public class FlyingChestEntity extends PathfinderMob {
 		@Override
 		public void start() {
 			Vec3 baseHoverPosition = this.mob.getBaseHoverPosition();
+			double distanceToTargetSqr = this.mob.distanceToSqr(baseHoverPosition);
+			double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr))/3;
 			this.mob.getLookControl().setLookAt(baseHoverPosition.x, baseHoverPosition.y, baseHoverPosition.z, 45.0F, 90.0F);
-			this.mob.getNavigation().moveTo(baseHoverPosition.x, baseHoverPosition.y, baseHoverPosition.z, RETURN_TO_BASE_SPEED);
+			this.mob.getNavigation().moveTo(baseHoverPosition.x, baseHoverPosition.y, baseHoverPosition.z, speed);
 		}
 
 		@Override
