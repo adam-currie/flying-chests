@@ -79,6 +79,9 @@ public class FlyingChestEntity extends PathfinderMob {
 	 * gets the owner player if they are online and within operating range of the base station.
 	 */
 	private Player getNearbyOwner() {
+		if (this.ownerUuid == null) {
+			return null;
+		}
 		Player owner = this.level().getPlayerByUUID(this.ownerUuid);
 		return 
 			owner != null && owner.isAlive() && 
