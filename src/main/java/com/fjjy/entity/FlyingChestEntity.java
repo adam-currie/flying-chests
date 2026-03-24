@@ -3,6 +3,8 @@ package com.fjjy.entity;
 import java.util.EnumSet;
 import java.util.UUID;
 
+import org.jetbrains.annotations.NotNull;
+
 import com.fjjy.FlyingChests;
 import com.mojang.serialization.Codec;
 
@@ -26,8 +28,7 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.NotNull;
-import net.minecraft.util.Util;
+import net.minecraft.util.RandomSource;
 
 public class FlyingChestEntity extends PathfinderMob {
 	private static final float MAX_OWNER_RANGE_FROM_BASE = 36.0F;
@@ -171,10 +172,13 @@ public class FlyingChestEntity extends PathfinderMob {
 
 	private static final class FollowOwnerGoal extends Goal {
 		private final FlyingChestEntity mob;
-		private int recalcTicks;
+		private int ticksRemaining;
+		private boolean skippedPrev = false;
+		private final RandomSource rng;
 
 		private FollowOwnerGoal(FlyingChestEntity mob) {
 			this.mob = mob;
+			this.rng = mob.getRandom();
 			this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
 		}
 
@@ -191,7 +195,7 @@ public class FlyingChestEntity extends PathfinderMob {
 
 		@Override
 		public void start() {
-			this.recalcTicks = 0;
+			this.ticksRemaining = 0;
 			this.mob.isDocked = false;
 		}
 
@@ -203,36 +207,105 @@ public class FlyingChestEntity extends PathfinderMob {
 		@Override
 		public void tick() {
 			Player owner = this.mob.getNearbyOwner();
-			if (owner != null && --this.recalcTicks <= 0) {			
-				long targetDeltaSqr = (long) (getOwnerToTargetDistanceSqr(owner) + 2.0D);//adding extra to simulate a sphere not a point
-				long sysTime = Util.getNanos();
+			if (owner != null && --this.ticksRemaining <= 0) {
+				this.ticksRemaining = calculateTicksRemaining(owner);
 
-				this.recalcTicks = (int) (sysTime % 64 / targetDeltaSqr) + 8;
-				
-				// chance to just stay still if still or stay going to the old spot, mostly when close
-				if (sysTime % (targetDeltaSqr+2) == 0) {
-					return;
+				{// if target/mob is close to player and not blocking their narrow fov, theres a chance to linger
+					Vec3 currentTarget = getCurrentTarget();
+					if (
+						owner.distanceToSqr(currentTarget) < 16.0D 
+						&& true //this.rng.nextBoolean() 
+						&& !this.skippedPrev
+						&& !isWithinOwnerNarrowFov(owner, currentTarget)
+					) {
+						this.skippedPrev = true;
+
+						//chance to look at player
+						if (true) {
+							this.mob.getLookControl().setLookAt(owner, 45.0F, 90.0F);
+						}
+
+						return;
+					} else {
+						this.skippedPrev = false;
+					}
 				}
 
-				this.mob.getLookControl().setLookAt(owner, 45.0F, 90.0F);
+				Vec3 target = null;
+				for (int i = 0; i < 3; i++) {
+					target = sampleCircle(owner, 2.5D);
 
-				double distanceToTargetSqr = this.mob.distanceToSqr(owner.position());
+					//shift up from players feet
+					target = target.add(0.0D, 2.0D, 0.0D);
+					
+					//apply gaussian blur
+					target = target.add(this.rng.nextGaussian(), this.rng.nextGaussian(), this.rng.nextGaussian());
+
+					// retry if target is blocking view of owner
+					if (!isWithinOwnerNarrowFov(owner, target)) {
+						break;
+					}
+				}
+
+				// 50/50 to look at player or target
+				if (this.rng.nextBoolean()) {
+					this.mob.getLookControl().setLookAt(owner, 45.0F, 90.0F);
+				}	else {
+					this.mob.getLookControl().setLookAt(target.x, target.y, target.z, 45.0F, 90.0F);
+				}
+
+				double distanceToTargetSqr = this.mob.distanceToSqr(target);
+
 				//random speed boost gets fed in linearly before the sqrting so it doesn't effect top speed/long range paths
-				double speedBoost = sysTime % 8;
+				double speedBoost = this.rng.nextInt(8);
 				double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr+speedBoost))/2;
-				double targetX = owner.getX() + 5*this.mob.getRandom().nextGaussian();
-				double targetZ = owner.getZ() + 5*this.mob.getRandom().nextGaussian();
-				this.mob.getNavigation().moveTo(targetX, owner.getY() + 1.0D, targetZ, speed);
+
+				this.mob.getNavigation().moveTo(target.x, target.y, target.z, speed);
 			}
 		}
 
-		private double getOwnerToTargetDistanceSqr(@NotNull Player owner) {
+		/**
+		 * samples a circle around the player
+		 */
+		private Vec3 sampleCircle(Player owner, double radius) {
+			double yaw = Math.toRadians(owner.getYRot());
+
+			double theta = yaw + this.rng.nextDouble() * 2.0D * Math.PI;
+
+			double dx = Math.cos(theta) * radius;
+			double dz = Math.sin(theta) * radius;
+			return new Vec3(owner.getX() + dx, owner.getY(), owner.getZ() + dz);
+		}
+
+		private static boolean isWithinOwnerNarrowFov(@NotNull Player owner, Vec3 target) {
+			Vec3 toChest = target.subtract(owner.getEyePosition());
+			double toChestLengthSqr = toChest.lengthSqr();
+			if (toChestLengthSqr < 1.0E-6D) {
+				return true;
+			}
+			Vec3 directionToChest = toChest.scale(1.0D / Math.sqrt(toChestLengthSqr));
+			double lookAlignment = owner.getLookAngle().dot(directionToChest);
+			return lookAlignment >= Math.cos(Math.toRadians(20.0D));
+		}
+
+		private int calculateTicksRemaining(@NotNull Player owner) {
+			final double distSqr = owner.distanceToSqr(getCurrentTarget());
+			//minimum ticks, half of this is also added pre randomization so distant points still get some randomization
+			final int minTicks = 10;
+			//max ticks before randomization, much higher when close
+			final int maxTicks = (int) (2048/Math.pow(distSqr + 8, 2)) + minTicks/2;
+			//randomize
+			return this.rng.nextInt(maxTicks + 1) + minTicks;
+		}
+
+		private Vec3 getCurrentTarget(){
 			BlockPos targetPos = this.mob.getNavigation().getTargetPos();
 			if (targetPos == null) {
 				targetPos = this.mob.blockPosition();
 			}
-			return owner.distanceToSqr(Vec3.atCenterOf(targetPos));
+			return Vec3.atCenterOf(targetPos);
 		}
+
 	}
 
 	private static final class ReturnToBaseGoal extends Goal {
