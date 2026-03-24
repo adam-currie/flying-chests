@@ -31,7 +31,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.util.RandomSource;
 
 public class FlyingChestEntity extends PathfinderMob {
-	private static final float MAX_OWNER_RANGE_FROM_BASE = 36.0F;
+	private static final float MAX_OWNER_RANGE_FROM_BASE = 32.0F;
 
 	private UUID ownerUuid;
 	private BlockPos baseStationPos;
