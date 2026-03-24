@@ -173,8 +173,9 @@ public class FlyingChestEntity extends PathfinderMob {
 	private static final class FollowOwnerGoal extends Goal {
 		private final FlyingChestEntity mob;
 		private int ticksRemaining;
-		private boolean skippedPrev = false;
+		private boolean skippedPrevDirectionUpdate = false;
 		private final RandomSource rng;
+		private boolean lookAtOwner = false;
 
 		private FollowOwnerGoal(FlyingChestEntity mob) {
 			this.mob = mob;
@@ -207,61 +208,62 @@ public class FlyingChestEntity extends PathfinderMob {
 		@Override
 		public void tick() {
 			Player owner = this.mob.getNearbyOwner();
-			if (owner != null && --this.ticksRemaining <= 0) {
-				this.ticksRemaining = calculateTicksRemaining(owner);
 
-				{// if target/mob is close to player and not blocking their narrow fov, theres a chance to linger
-					Vec3 currentTarget = getCurrentTarget();
-					if (
-						owner.distanceToSqr(currentTarget) < 16.0D 
-						&& true //this.rng.nextBoolean() 
-						&& !this.skippedPrev
-						&& !isWithinOwnerNarrowFov(owner, currentTarget)
-					) {
-						this.skippedPrev = true;
-
-						//chance to look at player
-						if (true) {
-							this.mob.getLookControl().setLookAt(owner, 45.0F, 90.0F);
-						}
-
-						return;
-					} else {
-						this.skippedPrev = false;
-					}
-				}
-
-				Vec3 target = null;
-				for (int i = 0; i < 3; i++) {
-					target = sampleCircle(owner, 2.5D);
-
-					//shift up from players feet
-					target = target.add(0.0D, 2.0D, 0.0D);
-					
-					//apply gaussian blur
-					target = target.add(this.rng.nextGaussian(), this.rng.nextGaussian(), this.rng.nextGaussian());
-
-					// retry if target is blocking view of owner
-					if (!isWithinOwnerNarrowFov(owner, target)) {
-						break;
-					}
-				}
-
-				// 50/50 to look at player or target
-				if (this.rng.nextBoolean()) {
-					this.mob.getLookControl().setLookAt(owner, 45.0F, 90.0F);
-				}	else {
-					this.mob.getLookControl().setLookAt(target.x, target.y, target.z, 45.0F, 90.0F);
-				}
-
-				double distanceToTargetSqr = this.mob.distanceToSqr(target);
-
-				//random speed boost gets fed in linearly before the sqrting so it doesn't effect top speed/long range paths
-				double speedBoost = this.rng.nextInt(8);
-				double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr+speedBoost))/2;
-
-				this.mob.getNavigation().moveTo(target.x, target.y, target.z, speed);
+			if (owner == null) {
+				return;
 			}
+
+			if (--this.ticksRemaining <= 0) {
+				this.ticksRemaining = calculateTicksRemaining(owner);
+				updateDirection(owner);
+				// 1 in 3 change to look at owner (instead of the target)
+				this.lookAtOwner = this.rng.nextInt(3) == 0; // 1 in 3
+			}
+
+			if (this.lookAtOwner) {
+				this.mob.getLookControl().setLookAt(owner, 45.0F, 90.0F);
+			}
+		}
+
+		private void updateDirection(@NotNull Player owner){
+			{// if target/mob is close to player and not blocking their narrow fov, theres a chance to linger
+				Vec3 currentTarget = getCurrentTarget();
+				if (
+					owner.distanceToSqr(currentTarget) < 16.0D 
+					&& true //this.rng.nextBoolean() 
+					&& !this.skippedPrevDirectionUpdate
+					&& !isWithinOwnerNarrowFov(owner, currentTarget)
+				) {
+					this.skippedPrevDirectionUpdate = true;
+					return;
+				} else {
+					this.skippedPrevDirectionUpdate = false;
+				}
+			}
+
+			Vec3 target = null;
+			for (int i = 0; i < 3; i++) {
+				target = sampleCircle(owner, 2.5D);
+
+				//shift up from players feet
+				target = target.add(0.0D, 2.0D, 0.0D);
+				
+				//apply gaussian blur
+				target = target.add(this.rng.nextGaussian(), this.rng.nextGaussian(), this.rng.nextGaussian());
+
+				// retry if target is blocking view of owner
+				if (!isWithinOwnerNarrowFov(owner, target)) {
+					break;
+				}
+			}
+
+			double distanceToTargetSqr = this.mob.distanceToSqr(target);
+
+			//random speed boost gets fed in linearly before the sqrting so it doesn't effect top speed/long range paths
+			double speedBoost = this.rng.nextInt(8);
+			double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr+speedBoost))/2;
+
+			this.mob.getNavigation().moveTo(target.x, target.y, target.z, speed);
 		}
 
 		/**
@@ -331,7 +333,6 @@ public class FlyingChestEntity extends PathfinderMob {
 			Vec3 baseHoverPosition = this.mob.getBaseHoverPosition();
 			double distanceToTargetSqr = this.mob.distanceToSqr(baseHoverPosition);
 			double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr))/3;
-			this.mob.getLookControl().setLookAt(baseHoverPosition.x, baseHoverPosition.y, baseHoverPosition.z, 45.0F, 90.0F);
 			this.mob.getNavigation().moveTo(baseHoverPosition.x, baseHoverPosition.y, baseHoverPosition.z, speed);
 		}
 
