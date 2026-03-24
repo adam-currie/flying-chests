@@ -36,7 +36,7 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
 	@Override
 	public void extractRenderState(FlyingChestEntity entity, FlyingChestRenderState state, float partialTick) {
 		super.extractRenderState(entity, state, partialTick);
-		state.yRot = Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot());
+		state.yRot = Mth.rotLerp(partialTick, entity.yHeadRotO, entity.getYHeadRot());
 		state.chestItem.clear();
 		this.itemModelResolver.updateForNonLiving(state.chestItem, CHEST_STACK, ItemDisplayContext.FIXED, entity);
 	}
