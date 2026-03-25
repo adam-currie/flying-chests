@@ -1,0 +1,18 @@
+{
+    "java.compile.nullAnalysis.mode": "disabled",
+    "java.project.sourcePaths": [
+        "src/main/java",
+        "src/client/java",
+        "src/test/java"
+    ],
+    "search.exclude": {
+        "build/**": true,
+        ".gradle/**": true,
+        "run/**": true
+    },
+    "files.watcherExclude": {
+        "build/**": true,
+        ".gradle/**": true,
+        "run/**": true
+    }
+}

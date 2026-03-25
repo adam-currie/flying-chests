@@ -19,7 +19,9 @@ classes/
 # vscode
 
 .settings/
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 bin/
 .classpath
 .project
