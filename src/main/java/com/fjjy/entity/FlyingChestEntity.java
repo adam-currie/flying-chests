@@ -10,6 +10,7 @@ import com.mojang.serialization.Codec;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -28,7 +29,6 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.util.RandomSource;
 
 public class FlyingChestEntity extends PathfinderMob {
 	private static final float MAX_OWNER_RANGE_FROM_BASE = 32.0F;
@@ -85,10 +85,6 @@ public class FlyingChestEntity extends PathfinderMob {
 				: null; 
 	}
 
-	private Vec3 getBaseHoverPosition() {
-		return Vec3.atCenterOf(this.baseStationPos).add(0.0D, 0.6D, 0.0D);
-	}
-
 	@Override
 	public boolean isNoGravity() {
 		return true;
@@ -132,14 +128,8 @@ public class FlyingChestEntity extends PathfinderMob {
 	@Override
 	protected void addAdditionalSaveData(ValueOutput output) {
 		super.addAdditionalSaveData(output);
-		if (this.ownerUuid != null) {
-			output.store("OwnerUuid", Codec.STRING, this.ownerUuid.toString());
-		}
-		if (this.baseStationPos != null) {
-			output.putInt("BaseX", this.baseStationPos.getX());
-			output.putInt("BaseY", this.baseStationPos.getY());
-			output.putInt("BaseZ", this.baseStationPos.getZ());
-		}
+		output.store("OwnerUuid", Codec.STRING, this.ownerUuid.toString());
+		output.store("BaseStationPos", BlockPos.CODEC, this.baseStationPos);
 	}
 
 	@Override
@@ -148,23 +138,16 @@ public class FlyingChestEntity extends PathfinderMob {
 		this.ownerUuid = input.read("OwnerUuid", Codec.STRING)
 			.map(UUID::fromString)
 			.orElse(null);
-		int baseY = input.getIntOr("BaseY", Integer.MIN_VALUE);
-		if (baseY != Integer.MIN_VALUE) {
-			this.baseStationPos = new BlockPos(
-				input.getIntOr("BaseX", 0),
-				baseY,
-				input.getIntOr("BaseZ", 0)
-			);
-		}
+		this.baseStationPos = input.read("BaseStationPos", BlockPos.CODEC)
+			.orElse(null);
 	}
 
 	public static FlyingChestEntity spawnFromPlacement(ServerLevel level, BlockPos baseStationPos, Player owner) {
 		FlyingChestEntity entity = new FlyingChestEntity(FlyingChests.FLYING_CHEST_ENTITY_TYPE, level);
-		Vec3 spawnPosition = Vec3.atCenterOf(baseStationPos).add(0.0D, 0.6D, 0.0D);
-		entity.snapTo(spawnPosition, owner.getYRot(), 0.0F);
+		entity.baseStationPos = baseStationPos.immutable();
+		entity.snapTo(entity.baseStationPos, owner.getYRot(), 0.0F);
 		entity.finalizeSpawn((ServerLevelAccessor) level, level.getCurrentDifficultyAt(baseStationPos), EntitySpawnReason.MOB_SUMMONED, null);
 		entity.ownerUuid = owner.getUUID();
-		entity.baseStationPos = baseStationPos.immutable();
 		entity.setPersistenceRequired();
 		level.addFreshEntity(entity);
 		return entity;
@@ -325,20 +308,25 @@ public class FlyingChestEntity extends PathfinderMob {
 
 		@Override
 		public boolean canContinueToUse() {
-			return this.mob.getNavigation().isInProgress();
+			return !this.mob.isDocked;
+		}
+
+		@Override
+		public void tick() {
+			if (!this.mob.getNavigation().isInProgress()) {
+				this.mob.isDocked = true;
+			}
 		}
 
 		@Override
 		public void start() {
-			Vec3 baseHoverPosition = this.mob.getBaseHoverPosition();
-			double distanceToTargetSqr = this.mob.distanceToSqr(baseHoverPosition);
+			double distanceToTargetSqr = this.mob.distanceToSqr(this.mob.baseStationPos.getX(), this.mob.baseStationPos.getY(), this.mob.baseStationPos.getZ());
 			double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr))/3;
-			this.mob.getNavigation().moveTo(baseHoverPosition.x, baseHoverPosition.y, baseHoverPosition.z, speed);
+			this.mob.getNavigation().moveTo(this.mob.baseStationPos.getX(), this.mob.baseStationPos.getY(), this.mob.baseStationPos.getZ(), speed);
 		}
 
 		@Override
 		public void stop() {
-			this.mob.isDocked = true;
 			this.mob.getNavigation().stop();
 		}
 	}
