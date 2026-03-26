@@ -6,6 +6,7 @@ import com.fjjy.entity.FlyingChestEntity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -15,6 +16,8 @@ import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.phys.BlockHitResult;
 
 /**
  * A chest block that follows the owner when nearby and opens/closes with the owners regular inventory.
@@ -64,5 +67,22 @@ public class FlyingChestBlock extends ChestBlock {
 				.getUUID()
 			);
 		}
+	}
+
+	@Override
+	public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+		// Only allow opening the chest when the linked flying entity is docked at the base
+		BlockEntity blockEntity = level.getBlockEntity(pos);
+		if (blockEntity instanceof FlyingChestBlockEntity flyingChestBlockEntity) {
+			if (level instanceof ServerLevel serverLevel) {
+				Entity linkedEntity = serverLevel.getEntity(flyingChestBlockEntity.getLinkedEntityUuid());
+				if (linkedEntity instanceof FlyingChestEntity flyingChest && !flyingChest.isDocked()) {
+					// Entity is flying away, deny opening
+					return InteractionResult.PASS;
+				}
+			}
+		}
+		// Entity is docked or not found, allow normal chest behavior
+		return super.useWithoutItem(state, level, pos, player, hitResult);
 	}
 }
