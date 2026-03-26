@@ -10,6 +10,9 @@ import com.mojang.serialization.Codec;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
@@ -34,10 +37,14 @@ import net.minecraft.world.phys.Vec3;
 public class FlyingChestEntity extends PathfinderMob {
 	private static final float MAX_OWNER_RANGE_FROM_BASE = 32.0F;
 
+	private static final EntityDataAccessor<Boolean> IS_DOCKED =
+		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.BOOLEAN);
+
+	private static final EntityDataAccessor<Byte> BASE_DIRECTION =
+		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.BYTE);
+
 	private UUID ownerUuid;
-	private BlockPos basePos;
-	protected Direction baseDirection;
-	protected boolean isDocked = true;
+	private BlockPos baseStationPos;
 
 	public FlyingChestEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
 		super(entityType, level);
@@ -49,6 +56,28 @@ public class FlyingChestEntity extends PathfinderMob {
 		return Mob.createMobAttributes()
 			.add(Attributes.FLYING_SPEED, 0.10D)
 			.add(Attributes.MOVEMENT_SPEED, 0.10D);
+	}
+
+	@Override
+	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		super.defineSynchedData(builder);
+		builder.define(IS_DOCKED, true);
+		builder.define(BASE_DIRECTION, (byte) 2); // Default to NORTH (2)
+	}
+	public Direction getBaseDirection() {
+		return Direction.from3DDataValue(this.entityData.get(BASE_DIRECTION));
+	}
+
+	public void setBaseDirection(Direction dir) {
+		this.entityData.set(BASE_DIRECTION, (byte) dir.get3DDataValue());
+	}
+
+	public boolean isDocked() {
+		return this.entityData.get(IS_DOCKED);
+	}
+
+	public void setDocked(boolean docked) {
+		this.entityData.set(IS_DOCKED, docked);
 	}
 
 	@Override
@@ -81,7 +110,7 @@ public class FlyingChestEntity extends PathfinderMob {
 		Player owner = this.level().getPlayerByUUID(this.ownerUuid);
 		return 
 			owner != null && owner.isAlive() && 
-			owner.distanceToSqr(Vec3.atCenterOf(this.basePos))
+			owner.distanceToSqr(Vec3.atCenterOf(this.baseStationPos))
 			<= (double) (MAX_OWNER_RANGE_FROM_BASE * MAX_OWNER_RANGE_FROM_BASE)
 				? owner
 				: null; 
@@ -131,7 +160,7 @@ public class FlyingChestEntity extends PathfinderMob {
 	protected void addAdditionalSaveData(ValueOutput output) {
 		super.addAdditionalSaveData(output);
 		output.store("OwnerUuid", Codec.STRING, this.ownerUuid.toString());
-		output.store("basePos", BlockPos.CODEC, this.basePos);
+		output.store("BaseStationPos", BlockPos.CODEC, this.baseStationPos);
 	}
 
 	@Override
@@ -140,15 +169,18 @@ public class FlyingChestEntity extends PathfinderMob {
 		this.ownerUuid = input.read("OwnerUuid", Codec.STRING)
 			.map(UUID::fromString)
 			.orElse(null);
-		this.basePos = input.read("basePos", BlockPos.CODEC)
+		this.baseStationPos = input.read("BaseStationPos", BlockPos.CODEC)
 			.orElse(null);
 	}
 
-	public static FlyingChestEntity spawnFromPlacement(ServerLevel level, BlockPos basePos, Facing direction, Player owner) {
+	public static FlyingChestEntity spawnFromPlacement(ServerLevel level, BlockPos baseStationPos, Direction facing, Player owner) {
 		FlyingChestEntity entity = new FlyingChestEntity(FlyingChests.FLYING_CHEST_ENTITY_TYPE, level);
-		entity.basePos = basePos.offset(0, 1, 0).immutable();
-		entity.baseDirection = facing;
-		entity.finalizeSpawn((ServerLevelAccessor) level, level.getCurrentDifficultyAt(basePos), EntitySpawnReason.MOB_SUMMONED, null);
+		entity.baseStationPos = baseStationPos.offset(0, 1, 0).immutable();
+		final var yRot = facing.toYRot();
+		entity.setBaseDirection(facing);
+		entity.snapTo(entity.baseStationPos, facing.toYRot(), 0.0F);
+		entity.yHeadRot = yRot;
+		entity.finalizeSpawn((ServerLevelAccessor) level, level.getCurrentDifficultyAt(baseStationPos), EntitySpawnReason.MOB_SUMMONED, null);
 		entity.ownerUuid = owner.getUUID();
 		entity.setPersistenceRequired();
 		level.addFreshEntity(entity);
@@ -170,7 +202,6 @@ public class FlyingChestEntity extends PathfinderMob {
 
 		@Override
 		public boolean canUse() {
-			//todo: here and other places we should skip the checks for most of the ticks, maybe 9 out of 10 so it only checks once a second
 			return this.mob.getNearbyOwner() != null;
 		}
 
@@ -182,7 +213,7 @@ public class FlyingChestEntity extends PathfinderMob {
 		@Override
 		public void start() {
 			this.ticksRemaining = 0;
-			this.mob.isDocked = false;
+			this.mob.setDocked(false);
 		}
 
 		@Override
@@ -201,7 +232,7 @@ public class FlyingChestEntity extends PathfinderMob {
 			if (--this.ticksRemaining <= 0) {
 				this.ticksRemaining = calculateTicksRemaining(owner);
 				updateDirection(owner);
-				// 1 in 3 change to look at owner (instead of the target)
+				// chance to look at owner (instead of the target)
 				this.lookAtOwner = this.rng.nextInt(3) == 0; // 1 in 3
 			}
 
@@ -215,7 +246,7 @@ public class FlyingChestEntity extends PathfinderMob {
 				Vec3 currentTarget = getCurrentTarget();
 				if (
 					owner.distanceToSqr(currentTarget) < 16.0D 
-					&& true //this.rng.nextBoolean() 
+					&& this.rng.nextBoolean() 
 					&& !this.skippedPrevDirectionUpdate
 					&& !isWithinOwnerNarrowFov(owner, currentTarget)
 				) {
@@ -305,26 +336,26 @@ public class FlyingChestEntity extends PathfinderMob {
 
 		@Override
 		public boolean canUse() {
-			return !this.mob.isDocked;
+			return !this.mob.isDocked();
 		}
 
 		@Override
 		public boolean canContinueToUse() {
-			return !this.mob.isDocked;
+			return !this.mob.isDocked();
 		}
 
 		@Override
 		public void tick() {
 			if (!this.mob.getNavigation().isInProgress()) {
-				this.mob.isDocked = true;
+				this.mob.setDocked(true);
 			}
 		}
 
 		@Override
 		public void start() {
-			double distanceToTargetSqr = this.mob.distanceToSqr(this.mob.basePos.getX(), this.mob.basePos.getY(), this.mob.basePos.getZ());
-			double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr))/3;
-			this.mob.getNavigation().moveTo(this.mob.basePos.getX(), this.mob.basePos.getY(), this.mob.basePos.getZ(), speed);
+			double distanceToTargetSqr = this.mob.distanceToSqr(this.mob.baseStationPos.getX(), this.mob.baseStationPos.getY(), this.mob.baseStationPos.getZ());
+			double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr)) / 3;
+			this.mob.getNavigation().moveTo(this.mob.baseStationPos.getX(), this.mob.baseStationPos.getY(), this.mob.baseStationPos.getZ(), speed);
 		}
 
 		@Override

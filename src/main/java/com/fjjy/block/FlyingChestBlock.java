@@ -57,8 +57,10 @@ public class FlyingChestBlock extends ChestBlock {
 		Player player = (Player) placer;
 		// spawn the flying chest entity and link it to the placed block entity (despawns together)
 		if (level.getBlockEntity(pos) instanceof FlyingChestBlockEntity flyingChestBlockEntity) {
+			// Pass the block's facing direction to the entity
+			net.minecraft.core.Direction facing = state.getValue(FACING);
 			flyingChestBlockEntity.setLinkedEntityUuid(
-				FlyingChestEntity.spawnFromPlacement((ServerLevel) level, pos, player)
+				FlyingChestEntity.spawnFromPlacement((ServerLevel) level, pos, facing, player)
 				.getUUID()
 			);
 		}
