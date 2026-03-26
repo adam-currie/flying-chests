@@ -350,6 +350,9 @@ public class FlyingChestEntity extends PathfinderMob {
 		@Override
 		public void tick() {
 			if (!this.mob.getNavigation().isInProgress()) {
+				// Snap to base station position when docking finishes
+				this.mob.setPos(Vec3.atCenterOf(this.mob.baseStationPos));
+				this.mob.setDeltaMovement(Vec3.ZERO);
 				this.mob.setDocked(true);
 			}
 		}
