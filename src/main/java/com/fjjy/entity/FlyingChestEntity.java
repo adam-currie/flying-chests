@@ -9,6 +9,7 @@ import com.fjjy.FlyingChests;
 import com.mojang.serialization.Codec;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
@@ -34,8 +35,9 @@ public class FlyingChestEntity extends PathfinderMob {
 	private static final float MAX_OWNER_RANGE_FROM_BASE = 32.0F;
 
 	private UUID ownerUuid;
-	private BlockPos baseStationPos;
-	private boolean isDocked = true;
+	private BlockPos basePos;
+	protected Direction baseDirection;
+	protected boolean isDocked = true;
 
 	public FlyingChestEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
 		super(entityType, level);
@@ -79,7 +81,7 @@ public class FlyingChestEntity extends PathfinderMob {
 		Player owner = this.level().getPlayerByUUID(this.ownerUuid);
 		return 
 			owner != null && owner.isAlive() && 
-			owner.distanceToSqr(Vec3.atCenterOf(this.baseStationPos))
+			owner.distanceToSqr(Vec3.atCenterOf(this.basePos))
 			<= (double) (MAX_OWNER_RANGE_FROM_BASE * MAX_OWNER_RANGE_FROM_BASE)
 				? owner
 				: null; 
@@ -129,7 +131,7 @@ public class FlyingChestEntity extends PathfinderMob {
 	protected void addAdditionalSaveData(ValueOutput output) {
 		super.addAdditionalSaveData(output);
 		output.store("OwnerUuid", Codec.STRING, this.ownerUuid.toString());
-		output.store("BaseStationPos", BlockPos.CODEC, this.baseStationPos);
+		output.store("basePos", BlockPos.CODEC, this.basePos);
 	}
 
 	@Override
@@ -138,15 +140,15 @@ public class FlyingChestEntity extends PathfinderMob {
 		this.ownerUuid = input.read("OwnerUuid", Codec.STRING)
 			.map(UUID::fromString)
 			.orElse(null);
-		this.baseStationPos = input.read("BaseStationPos", BlockPos.CODEC)
+		this.basePos = input.read("basePos", BlockPos.CODEC)
 			.orElse(null);
 	}
 
-	public static FlyingChestEntity spawnFromPlacement(ServerLevel level, BlockPos baseStationPos, Player owner) {
+	public static FlyingChestEntity spawnFromPlacement(ServerLevel level, BlockPos basePos, Facing direction, Player owner) {
 		FlyingChestEntity entity = new FlyingChestEntity(FlyingChests.FLYING_CHEST_ENTITY_TYPE, level);
-		entity.baseStationPos = baseStationPos.immutable();
-		entity.snapTo(entity.baseStationPos, owner.getYRot(), 0.0F);
-		entity.finalizeSpawn((ServerLevelAccessor) level, level.getCurrentDifficultyAt(baseStationPos), EntitySpawnReason.MOB_SUMMONED, null);
+		entity.basePos = basePos.offset(0, 1, 0).immutable();
+		entity.baseDirection = facing;
+		entity.finalizeSpawn((ServerLevelAccessor) level, level.getCurrentDifficultyAt(basePos), EntitySpawnReason.MOB_SUMMONED, null);
 		entity.ownerUuid = owner.getUUID();
 		entity.setPersistenceRequired();
 		level.addFreshEntity(entity);
@@ -320,9 +322,9 @@ public class FlyingChestEntity extends PathfinderMob {
 
 		@Override
 		public void start() {
-			double distanceToTargetSqr = this.mob.distanceToSqr(this.mob.baseStationPos.getX(), this.mob.baseStationPos.getY(), this.mob.baseStationPos.getZ());
+			double distanceToTargetSqr = this.mob.distanceToSqr(this.mob.basePos.getX(), this.mob.basePos.getY(), this.mob.basePos.getZ());
 			double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr))/3;
-			this.mob.getNavigation().moveTo(this.mob.baseStationPos.getX(), this.mob.baseStationPos.getY(), this.mob.baseStationPos.getZ(), speed);
+			this.mob.getNavigation().moveTo(this.mob.basePos.getX(), this.mob.basePos.getY(), this.mob.basePos.getZ(), speed);
 		}
 
 		@Override
