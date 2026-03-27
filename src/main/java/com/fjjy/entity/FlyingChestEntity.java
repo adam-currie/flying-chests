@@ -359,8 +359,7 @@ public class FlyingChestEntity extends PathfinderMob {
 
 		@Override
 		public void start() {
-			double distanceToTargetSqr = this.mob.distanceToSqr(this.mob.baseStationPos.getX(), this.mob.baseStationPos.getY(), this.mob.baseStationPos.getZ());
-			double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr)) / 3;
+			double speed = 2.9D;
 			this.mob.getNavigation().moveTo(this.mob.baseStationPos.getX(), this.mob.baseStationPos.getY(), this.mob.baseStationPos.getZ(), speed);
 		}
 
