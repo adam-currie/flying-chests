@@ -4,17 +4,25 @@ import java.util.EnumSet;
 import java.util.UUID;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import com.fjjy.FlyingChests;
 import com.mojang.serialization.Codec;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -27,14 +35,19 @@ import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 
-public class FlyingChestEntity extends PathfinderMob {
+public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	private static final float MAX_OWNER_RANGE_FROM_BASE = 32.0F;
 
 	private static final EntityDataAccessor<Boolean> IS_DOCKED =
@@ -43,8 +56,17 @@ public class FlyingChestEntity extends PathfinderMob {
 	private static final EntityDataAccessor<Byte> BASE_DIRECTION =
 		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.BYTE);
 
+	private static final EntityDataAccessor<Integer> OPEN_COUNT =
+		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.INT);
+
 	private UUID ownerUuid;
 	private BlockPos baseStationPos;
+
+	// Client-side lid animation (0.0 = closed, 1.0 = fully open)
+	public float lidAngle;
+	public float lidAngleO;
+
+	private final SimpleContainer inventory = new SimpleContainer(27);
 
 	public FlyingChestEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
 		super(entityType, level);
@@ -63,6 +85,7 @@ public class FlyingChestEntity extends PathfinderMob {
 		super.defineSynchedData(builder);
 		builder.define(IS_DOCKED, true);
 		builder.define(BASE_DIRECTION, (byte) 2); // Default to NORTH (2)
+		builder.define(OPEN_COUNT, 0);
 	}
 	public Direction getBaseDirection() {
 		return Direction.from3DDataValue(this.entityData.get(BASE_DIRECTION));
@@ -87,6 +110,56 @@ public class FlyingChestEntity extends PathfinderMob {
 		pathNavigation.setCanFloat(true);
 		pathNavigation.setRequiredPathLength(48.0F);
 		return pathNavigation;
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (this.level().isClientSide()) {
+			this.lidAngleO = this.lidAngle;
+			if (this.entityData.get(OPEN_COUNT) > 0) {
+				this.lidAngle = Math.min(1.0F, this.lidAngle + 0.1F);
+			} else {
+				this.lidAngle = Math.max(0.0F, this.lidAngle - 0.1F);
+			}
+		}
+	}
+
+	@Override
+	protected InteractionResult mobInteract(Player player, InteractionHand hand) {
+		if (!this.level().isClientSide() && player instanceof ServerPlayer serverPlayer) {
+			serverPlayer.openMenu(this);
+		}
+		return InteractionResult.SUCCESS;
+	}
+
+	@Override
+	public Component getDisplayName() {
+		return Component.translatable("container.chest");
+	}
+
+	@Override
+	@Nullable
+	public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+		int newCount = this.entityData.get(OPEN_COUNT) + 1;
+		this.entityData.set(OPEN_COUNT, newCount);
+		if (newCount == 1) {
+			this.playSound(SoundEvents.CHEST_OPEN, 0.5F, this.level().random.nextFloat() * 0.1F + 0.9F);
+		}
+		return new ChestMenu(MenuType.GENERIC_9x3, containerId, playerInventory, this.inventory, 3) {
+			@Override
+			public void removed(Player p) {
+				super.removed(p);
+				if (!FlyingChestEntity.this.isRemoved()) {
+					int count = Math.max(0, FlyingChestEntity.this.entityData.get(OPEN_COUNT) - 1);
+					FlyingChestEntity.this.entityData.set(OPEN_COUNT, count);
+					if (count == 0) {
+						FlyingChestEntity.this.playSound(SoundEvents.CHEST_CLOSE, 0.5F,
+							FlyingChestEntity.this.level().random.nextFloat() * 0.1F + 0.9F);
+					}
+				}
+			}
+		};
 	}
 
 	@Override
@@ -131,7 +204,7 @@ public class FlyingChestEntity extends PathfinderMob {
 
 	@Override
 	public boolean isPickable() {
-		return false;
+		return this.isDocked();
 	}
 
 	@Override
@@ -164,6 +237,9 @@ public class FlyingChestEntity extends PathfinderMob {
 		super.addAdditionalSaveData(output);
 		output.store("OwnerUuid", Codec.STRING, this.ownerUuid.toString());
 		output.store("BaseStationPos", BlockPos.CODEC, this.baseStationPos);
+		output.store("Items", ItemContainerContents.CODEC,
+			ItemContainerContents.fromItems(this.inventory.getItems()));
+		output.store("BaseDirection", Codec.BYTE, (byte) this.getBaseDirection().get3DDataValue());
 	}
 
 	@Override
@@ -174,6 +250,10 @@ public class FlyingChestEntity extends PathfinderMob {
 			.orElse(null);
 		this.baseStationPos = input.read("BaseStationPos", BlockPos.CODEC)
 			.orElse(null);
+		input.read("Items", ItemContainerContents.CODEC)
+			.ifPresent(contents -> contents.copyInto(this.inventory.getItems()));
+		input.read("BaseDirection", Codec.BYTE)
+			.ifPresent(b -> setBaseDirection(Direction.from3DDataValue(b)));
 	}
 
 	public static FlyingChestEntity spawnFromPlacement(ServerLevel level, BlockPos baseStationPos, Direction facing, Player owner) {

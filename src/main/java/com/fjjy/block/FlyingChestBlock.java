@@ -1,34 +1,35 @@
 package com.fjjy.block;
 
-import com.fjjy.FlyingChests;
 import com.fjjy.blockentity.FlyingChestBlockEntity;
 import com.fjjy.entity.FlyingChestEntity;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
-/**
- * A chest block that follows the owner when nearby and opens/closes with the owners regular inventory.
- *
- * <p>Creates a corresponding block entity when placed {@link FlyingChestBlockEntity} (visually just the base station) 
- * and a proper entity {@link FlyingChestEntity} for visually flying around.
- * The block entity stores the link so the flying entity can be cleaned up when the base block is removed.
- */
-public class FlyingChestBlock extends ChestBlock {
+public class FlyingChestBlock extends Block implements EntityBlock {
+
+	public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
+
 	public FlyingChestBlock(Properties properties) {
-		super(() -> FlyingChests.FLYING_CHEST_BLOCK_ENTITY_TYPE, SoundEvents.CHEST_OPEN, SoundEvents.CHEST_CLOSE, properties);
+		super(properties);
+		this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
 	}
 
 	@Override
@@ -37,17 +38,21 @@ public class FlyingChestBlock extends ChestBlock {
 	}
 
 	@Override
-	public BlockState getStateForPlacement(BlockPlaceContext context) {
-		if (context.getPlayer() == null) {
-			// Only players can own a flying chest; cancel placement for non-player placers.
-			return null;
-		}
-		return super.getStateForPlacement(context);
+	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+		builder.add(FACING);
 	}
 
 	@Override
-	public boolean chestCanConnectTo(BlockState state) {
-		return false;
+	public BlockState getStateForPlacement(BlockPlaceContext context) {
+		if (context.getPlayer() == null) {
+			return null;
+		}
+		return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+	}
+
+	@Override
+	public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return Shapes.empty();
 	}
 
 	@Override
@@ -56,33 +61,11 @@ public class FlyingChestBlock extends ChestBlock {
 		if (level.isClientSide()) {
 			return;
 		}
-		// getStateForPlacement already blocked non-player placers, so placer is always a Player here.
-		Player player = (Player) placer;
-		// spawn the flying chest entity and link it to the placed block entity (despawns together)
-		if (level.getBlockEntity(pos) instanceof FlyingChestBlockEntity flyingChestBlockEntity) {
-			// Pass the block's facing direction to the entity
-			net.minecraft.core.Direction facing = state.getValue(FACING);
-			flyingChestBlockEntity.setLinkedEntityUuid(
-				FlyingChestEntity.spawnFromPlacement((ServerLevel) level, pos, facing, player)
-				.getUUID()
-			);
+		Direction facing = state.getValue(FACING);
+		FlyingChestEntity entity = FlyingChestEntity.spawnFromPlacement((ServerLevel) level, pos, facing, (Player) placer);
+		if (level.getBlockEntity(pos) instanceof FlyingChestBlockEntity blockEntity) {
+			blockEntity.setLinkedEntityUuid(entity.getUUID());
 		}
-	}
-
-	@Override
-	public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-		// Only allow opening the chest when the linked flying entity is docked at the base
-		BlockEntity blockEntity = level.getBlockEntity(pos);
-		if (blockEntity instanceof FlyingChestBlockEntity flyingChestBlockEntity) {
-			if (level instanceof ServerLevel serverLevel) {
-				Entity linkedEntity = serverLevel.getEntity(flyingChestBlockEntity.getLinkedEntityUuid());
-				if (linkedEntity instanceof FlyingChestEntity flyingChest && !flyingChest.isDocked()) {
-					// Entity is flying away, deny opening
-					return InteractionResult.PASS;
-				}
-			}
-		}
-		// Entity is docked or not found, allow normal chest behavior
-		return super.useWithoutItem(state, level, pos, player, hitResult);
 	}
 }
+

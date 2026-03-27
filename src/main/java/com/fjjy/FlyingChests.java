@@ -23,12 +23,11 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
 public class FlyingChests implements ModInitializer {
 	public static final String MOD_ID = "flying-chests";
-	private static final Identifier FLYING_CHEST_ID = Identifier.fromNamespaceAndPath(MOD_ID, "flying_chest");
+	private static final Identifier FLYING_CHEST_ID = Identifier.fromNamespaceAndPath(MOD_ID, "flying_chest_base");
 	private static final Identifier FLYING_CHEST_ENTITY_ID = Identifier.fromNamespaceAndPath(MOD_ID, "flying_chest_entity");
 
 	private static final ResourceKey<net.minecraft.world.level.block.Block> FLYING_CHEST_BLOCK_KEY =
@@ -39,10 +38,10 @@ public class FlyingChests implements ModInitializer {
 		new FlyingChestBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.CHEST).setId(FLYING_CHEST_BLOCK_KEY))
 	);
 
-	public static BlockEntityType<ChestBlockEntity> FLYING_CHEST_BLOCK_ENTITY_TYPE = Registry.register(
+	public static final BlockEntityType<FlyingChestBlockEntity> FLYING_CHEST_BLOCK_ENTITY_TYPE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE,
 		FLYING_CHEST_ID,
-		FabricBlockEntityTypeBuilder.<ChestBlockEntity>create(FlyingChestBlockEntity::new, FLYING_CHEST_BLOCK).build()
+		FabricBlockEntityTypeBuilder.create(FlyingChestBlockEntity::new, FLYING_CHEST_BLOCK).build()
 	);
 
 	private static final ResourceKey<EntityType<?>> FLYING_CHEST_ENTITY_KEY =
