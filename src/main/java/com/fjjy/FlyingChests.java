@@ -6,11 +6,15 @@ import org.slf4j.LoggerFactory;
 import com.fjjy.block.FlyingChestBlock;
 import com.fjjy.blockentity.FlyingChestBlockEntity;
 import com.fjjy.entity.FlyingChestEntity;
+import com.fjjy.network.OpenFlyingChestPayload;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -70,6 +74,18 @@ public class FlyingChests implements ModInitializer {
 	public void onInitialize() {
 		FabricDefaultAttributeRegistry.register(FLYING_CHEST_ENTITY_TYPE, FlyingChestEntity.createAttributes());
 		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(entries -> entries.accept(FLYING_CHEST));
+
+		PayloadTypeRegistry.playC2S().register(OpenFlyingChestPayload.TYPE, OpenFlyingChestPayload.STREAM_CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(OpenFlyingChestPayload.TYPE, (payload, context) -> {
+			context.server().execute(() -> {
+				var player = context.player();
+				var entity = ((ServerLevel) player.level()).getEntity(payload.entityId());
+				if (entity instanceof FlyingChestEntity chest && chest.getOwnerInRange() == player) {
+					player.openMenu(chest);
+				}
+			});
+		});
+
 		LOGGER.info("Registered flying chest block/item and flying entity");
 	}
 }

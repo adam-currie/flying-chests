@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 import com.fjjy.FlyingChests;
 import com.mojang.serialization.Codec;
@@ -48,7 +50,6 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 
 public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
-	private static final float MAX_OWNER_RANGE_FROM_BASE = 32.0F;
 
 	private static final EntityDataAccessor<Boolean> IS_DOCKED =
 		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.BOOLEAN);
@@ -59,8 +60,18 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	private static final EntityDataAccessor<Integer> OPEN_COUNT =
 		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.INT);
 
-	private UUID ownerUuid;
-	private Vec3 baseStationPos;
+	// empty string = no owner
+	private static final EntityDataAccessor<String> OWNER_UUID =
+		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.STRING);
+
+	// NaN y = not yet set
+	private static final EntityDataAccessor<Vector3fc> BASE_STATION_POS =
+		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.VECTOR3);
+
+	public static final double OWNER_TO_BASE_OPERATING_RANGE = 32.0F;
+
+	public static final double OWNER_TO_BASE_OPERATING_RANGE_SQR =
+		(double)(OWNER_TO_BASE_OPERATING_RANGE * OWNER_TO_BASE_OPERATING_RANGE);
 
 	// Client-side lid animation (0.0 = closed, 1.0 = fully open)
 	public float lidAngle;
@@ -84,8 +95,10 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	protected void defineSynchedData(SynchedEntityData.Builder builder) {
 		super.defineSynchedData(builder);
 		builder.define(IS_DOCKED, true);
-		builder.define(BASE_DIRECTION, (byte) 2); // Default to NORTH (2)
+		builder.define(BASE_DIRECTION, (byte) 2);
 		builder.define(OPEN_COUNT, 0);
+		builder.define(OWNER_UUID, "");
+		builder.define(BASE_STATION_POS, new Vector3f(0.0f, Float.NaN, 0.0f));
 	}
 	public Direction getBaseDirection() {
 		return Direction.from3DDataValue(this.entityData.get(BASE_DIRECTION));
@@ -173,23 +186,42 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		this.travelFlying(input, this.getSpeed());
 	}
 
+	public UUID getOwnerUuid() {
+		String s = this.entityData.get(OWNER_UUID);
+		return s.isEmpty() ? null : UUID.fromString(s);
+	}
+
+	public Vec3 getBaseStationPos() {
+		Vector3fc v = this.entityData.get(BASE_STATION_POS);
+		return Float.isNaN(v.y()) ? null : new Vec3(v.x(), v.y(), v.z());
+	}
+
+	private void setBaseStationPos(Vec3 pos) {
+		this.entityData.set(BASE_STATION_POS, new Vector3f((float)pos.x, (float)pos.y, (float)pos.z));
+	}
+
+	private Player _getOwnerInRange(double minDistSqr) {
+		Player owner = this.level().getPlayerByUUID(getOwnerUuid());
+		Vec3 bsp = this.getBaseStationPos();
+		if (owner == null || !owner.isAlive() || bsp == null) {
+			return null;
+		}
+		final double distSqr = owner.distanceToSqr(bsp);
+		return distSqr <= OWNER_TO_BASE_OPERATING_RANGE_SQR
+			&& distSqr > minDistSqr
+				? owner
+				: null;
+	}
+
 	/**
 	 * gets the owner player if they are between 5 and 32 blocks
 	 */
 	private Player getOwnerInFollowRange() {
-		if (this.ownerUuid == null) {
-			return null;
-		}
-		Player owner = this.level().getPlayerByUUID(this.ownerUuid);
-		if (owner == null || !owner.isAlive()) {
-			return null;
-		}
-		final var distSqr = owner.distanceToSqr(this.baseStationPos);
-		return 
-			distSqr <= (double) (MAX_OWNER_RANGE_FROM_BASE * MAX_OWNER_RANGE_FROM_BASE)
-			&& distSqr > 25.0D // if owner is close just go to the base station instead.
-				? owner
-				: null; 
+		return _getOwnerInRange(20.0D);
+	}
+
+	public Player getOwnerInRange() {
+		return _getOwnerInRange(0.0D);
 	}
 
 	@Override
@@ -235,8 +267,10 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	@Override
 	protected void addAdditionalSaveData(ValueOutput output) {
 		super.addAdditionalSaveData(output);
-		output.store("OwnerUuid", Codec.STRING, this.ownerUuid.toString());
-		output.store("BaseStationPos", Vec3.CODEC, this.baseStationPos);
+		String ownerStr = this.entityData.get(OWNER_UUID);
+		if (!ownerStr.isEmpty()) output.store("OwnerUuid", Codec.STRING, ownerStr);
+		Vec3 bsp = this.getBaseStationPos();
+		if (bsp != null) output.store("BaseStationPos", Vec3.CODEC, bsp);
 		output.store("IsDocked", Codec.BOOL, this.isDocked());
 		output.store("Items", ItemContainerContents.CODEC,
 			ItemContainerContents.fromItems(this.inventory.getItems()));
@@ -246,11 +280,8 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	@Override
 	protected void readAdditionalSaveData(ValueInput input) {
 		super.readAdditionalSaveData(input);
-		this.ownerUuid = input.read("OwnerUuid", Codec.STRING)
-			.map(UUID::fromString)
-			.orElse(null);
-		this.baseStationPos = input.read("BaseStationPos", Vec3.CODEC)
-			.orElse(null);
+		this.entityData.set(OWNER_UUID, input.read("OwnerUuid", Codec.STRING).orElse(""));
+		input.read("BaseStationPos", Vec3.CODEC).ifPresent(this::setBaseStationPos);
 		input.read("IsDocked", Codec.BOOL)
 			.ifPresent(this::setDocked);
 		input.read("Items", ItemContainerContents.CODEC)
@@ -261,13 +292,14 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 
 	public static FlyingChestEntity spawnFromPlacement(ServerLevel level, BlockPos baseStationPos, Direction facing, Player owner) {
 		FlyingChestEntity entity = new FlyingChestEntity(FlyingChests.FLYING_CHEST_ENTITY_TYPE, level);
-		entity.baseStationPos = Vec3.atCenterOf(baseStationPos).subtract(0, 0.4, 0);
+		Vec3 bsp = Vec3.atCenterOf(baseStationPos).subtract(0, 0.4, 0);
+		entity.setBaseStationPos(bsp);
 		final var yRot = facing.toYRot();
 		entity.setBaseDirection(facing);
-		entity.snapTo(entity.baseStationPos.x, entity.baseStationPos.y, entity.baseStationPos.z, facing.toYRot(), 0.0F);
+		entity.snapTo(bsp.x, bsp.y, bsp.z, facing.toYRot(), 0.0F);
 		entity.yHeadRot = yRot;
 		entity.finalizeSpawn((ServerLevelAccessor) level, level.getCurrentDifficultyAt(baseStationPos), EntitySpawnReason.MOB_SUMMONED, null);
-		entity.ownerUuid = owner.getUUID();
+		entity.entityData.set(OWNER_UUID, owner.getUUID().toString());
 		entity.setPersistenceRequired();
 		level.addFreshEntity(entity);
 		return entity;
@@ -434,7 +466,8 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		public void tick() {
 			if (!this.mob.getNavigation().isInProgress()) {
 				// Snap to base station position when docking finishes
-				this.mob.setPos(this.mob.baseStationPos);
+				Vec3 bsp = this.mob.getBaseStationPos();
+				if (bsp != null) this.mob.setPos(bsp);
 				this.mob.setDeltaMovement(Vec3.ZERO);
 				this.mob.setDocked(true);
 			}
@@ -443,7 +476,8 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		@Override
 		public void start() {
 			double speed = 2.9D;
-			this.mob.getNavigation().moveTo(this.mob.baseStationPos.x, this.mob.baseStationPos.y, this.mob.baseStationPos.z, speed);
+			Vec3 bsp = this.mob.getBaseStationPos();
+			if (bsp != null) this.mob.getNavigation().moveTo(bsp.x, bsp.y, bsp.z, speed);
 		}
 
 		@Override
