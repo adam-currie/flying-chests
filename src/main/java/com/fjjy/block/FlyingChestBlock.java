@@ -26,6 +26,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 public class FlyingChestBlock extends Block implements EntityBlock {
 
 	public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
+	private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 3, 16);
 
 	public FlyingChestBlock(Properties properties) {
 		super(properties);
@@ -48,6 +49,11 @@ public class FlyingChestBlock extends Block implements EntityBlock {
 			return null;
 		}
 		return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+	}
+
+	@Override
+	public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return SHAPE;
 	}
 
 	@Override

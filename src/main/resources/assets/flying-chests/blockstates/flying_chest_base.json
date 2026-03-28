@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "flying-chests:block/flying_chest_base" },
+    "facing=south": { "model": "flying-chests:block/flying_chest_base", "y": 180 },
+    "facing=east":  { "model": "flying-chests:block/flying_chest_base", "y": 90 },
+    "facing=west":  { "model": "flying-chests:block/flying_chest_base", "y": 270 }
+  }
+}

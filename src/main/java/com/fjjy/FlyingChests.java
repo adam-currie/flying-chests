@@ -35,7 +35,7 @@ public class FlyingChests implements ModInitializer {
 	public static final FlyingChestBlock FLYING_CHEST_BLOCK = Registry.register(
 		BuiltInRegistries.BLOCK,
 		FLYING_CHEST_ID,
-		new FlyingChestBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.CHEST).setId(FLYING_CHEST_BLOCK_KEY))
+		new FlyingChestBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.CHEST).noOcclusion().setId(FLYING_CHEST_BLOCK_KEY))
 	);
 
 	public static final BlockEntityType<FlyingChestBlockEntity> FLYING_CHEST_BLOCK_ENTITY_TYPE = Registry.register(

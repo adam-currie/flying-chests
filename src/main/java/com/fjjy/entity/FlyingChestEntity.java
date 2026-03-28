@@ -60,7 +60,7 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.INT);
 
 	private UUID ownerUuid;
-	private BlockPos baseStationPos;
+	private Vec3 baseStationPos;
 
 	// Client-side lid animation (0.0 = closed, 1.0 = fully open)
 	public float lidAngle;
@@ -184,7 +184,7 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		if (owner == null || !owner.isAlive()) {
 			return null;
 		}
-		final var distSqr = owner.distanceToSqr(Vec3.atCenterOf(this.baseStationPos));
+		final var distSqr = owner.distanceToSqr(this.baseStationPos);
 		return 
 			distSqr <= (double) (MAX_OWNER_RANGE_FROM_BASE * MAX_OWNER_RANGE_FROM_BASE)
 			&& distSqr > 25.0D // if owner is close just go to the base station instead.
@@ -236,7 +236,7 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	protected void addAdditionalSaveData(ValueOutput output) {
 		super.addAdditionalSaveData(output);
 		output.store("OwnerUuid", Codec.STRING, this.ownerUuid.toString());
-		output.store("BaseStationPos", BlockPos.CODEC, this.baseStationPos);
+		output.store("BaseStationPos", Vec3.CODEC, this.baseStationPos);
 		output.store("Items", ItemContainerContents.CODEC,
 			ItemContainerContents.fromItems(this.inventory.getItems()));
 		output.store("BaseDirection", Codec.BYTE, (byte) this.getBaseDirection().get3DDataValue());
@@ -248,7 +248,7 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		this.ownerUuid = input.read("OwnerUuid", Codec.STRING)
 			.map(UUID::fromString)
 			.orElse(null);
-		this.baseStationPos = input.read("BaseStationPos", BlockPos.CODEC)
+		this.baseStationPos = input.read("BaseStationPos", Vec3.CODEC)
 			.orElse(null);
 		input.read("Items", ItemContainerContents.CODEC)
 			.ifPresent(contents -> contents.copyInto(this.inventory.getItems()));
@@ -258,10 +258,10 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 
 	public static FlyingChestEntity spawnFromPlacement(ServerLevel level, BlockPos baseStationPos, Direction facing, Player owner) {
 		FlyingChestEntity entity = new FlyingChestEntity(FlyingChests.FLYING_CHEST_ENTITY_TYPE, level);
-		entity.baseStationPos = baseStationPos.offset(0, 1, 0).immutable();
+		entity.baseStationPos = Vec3.atCenterOf(baseStationPos).subtract(0, 0.4, 0);
 		final var yRot = facing.toYRot();
 		entity.setBaseDirection(facing);
-		entity.snapTo(entity.baseStationPos, facing.toYRot(), 0.0F);
+		entity.snapTo(entity.baseStationPos.x, entity.baseStationPos.y, entity.baseStationPos.z, facing.toYRot(), 0.0F);
 		entity.yHeadRot = yRot;
 		entity.finalizeSpawn((ServerLevelAccessor) level, level.getCurrentDifficultyAt(baseStationPos), EntitySpawnReason.MOB_SUMMONED, null);
 		entity.ownerUuid = owner.getUUID();
@@ -431,7 +431,7 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		public void tick() {
 			if (!this.mob.getNavigation().isInProgress()) {
 				// Snap to base station position when docking finishes
-				this.mob.setPos(Vec3.atCenterOf(this.mob.baseStationPos));
+				this.mob.setPos(this.mob.baseStationPos);
 				this.mob.setDeltaMovement(Vec3.ZERO);
 				this.mob.setDocked(true);
 			}
@@ -440,7 +440,7 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		@Override
 		public void start() {
 			double speed = 2.9D;
-			this.mob.getNavigation().moveTo(this.mob.baseStationPos.getX(), this.mob.baseStationPos.getY(), this.mob.baseStationPos.getZ(), speed);
+			this.mob.getNavigation().moveTo(this.mob.baseStationPos.x, this.mob.baseStationPos.y, this.mob.baseStationPos.z, speed);
 		}
 
 		@Override
