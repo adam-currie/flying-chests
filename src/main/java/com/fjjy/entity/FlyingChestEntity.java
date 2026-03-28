@@ -60,24 +60,21 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	private static final EntityDataAccessor<Integer> OPEN_COUNT =
 		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.INT);
 
-	// empty string = no owner
-	private static final EntityDataAccessor<String> OWNER_UUID =
-		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.STRING);
-
 	// NaN y = not yet set
 	private static final EntityDataAccessor<Vector3fc> BASE_STATION_POS =
 		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.VECTOR3);
 
-	public static final double OWNER_TO_BASE_OPERATING_RANGE = 32.0F;
-
-	public static final double OWNER_TO_BASE_OPERATING_RANGE_SQR =
-		(double)(OWNER_TO_BASE_OPERATING_RANGE * OWNER_TO_BASE_OPERATING_RANGE);
+	private static final EntityDataAccessor<String> OWNER_UUID =
+		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.STRING);
 
 	// Client-side lid animation (0.0 = closed, 1.0 = fully open)
 	public float lidAngle;
 	public float lidAngleO;
 
 	private final SimpleContainer inventory = new SimpleContainer(27);
+
+	// owner in operating range of the base station when it is the closest owned base to the player, otherwise null
+	public ServerPlayer activeOwner = null;
 
 	public FlyingChestEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
 		super(entityType, level);
@@ -97,8 +94,18 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		builder.define(IS_DOCKED, true);
 		builder.define(BASE_DIRECTION, (byte) 2);
 		builder.define(OPEN_COUNT, 0);
-		builder.define(OWNER_UUID, "");
 		builder.define(BASE_STATION_POS, new Vector3f(0.0f, Float.NaN, 0.0f));
+		builder.define(OWNER_UUID, "");
+	}
+
+	@Nullable
+	public UUID getOwnerUuid() {
+		String s = this.entityData.get(OWNER_UUID);
+		return s.isEmpty() ? null : UUID.fromString(s);
+	}
+
+	public void setOwnerUuid(@Nullable UUID uuid) {
+		this.entityData.set(OWNER_UUID, uuid == null ? "" : uuid.toString());
 	}
 	public Direction getBaseDirection() {
 		return Direction.from3DDataValue(this.entityData.get(BASE_DIRECTION));
@@ -186,11 +193,6 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		this.travelFlying(input, this.getSpeed());
 	}
 
-	public UUID getOwnerUuid() {
-		String s = this.entityData.get(OWNER_UUID);
-		return s.isEmpty() ? null : UUID.fromString(s);
-	}
-
 	public Vec3 getBaseStationPos() {
 		Vector3fc v = this.entityData.get(BASE_STATION_POS);
 		return Float.isNaN(v.y()) ? null : new Vec3(v.x(), v.y(), v.z());
@@ -200,28 +202,11 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		this.entityData.set(BASE_STATION_POS, new Vector3f((float)pos.x, (float)pos.y, (float)pos.z));
 	}
 
-	private Player _getOwnerInRange(double minDistSqr) {
-		Player owner = this.level().getPlayerByUUID(getOwnerUuid());
-		Vec3 bsp = this.getBaseStationPos();
-		if (owner == null || !owner.isAlive() || bsp == null) {
-			return null;
-		}
-		final double distSqr = owner.distanceToSqr(bsp);
-		return distSqr <= OWNER_TO_BASE_OPERATING_RANGE_SQR
-			&& distSqr > minDistSqr
-				? owner
-				: null;
-	}
-
 	/**
-	 * gets the owner player if they are between 5 and 32 blocks
+	 * follow range = in operating range but further than auto docking range
 	 */
-	private Player getOwnerInFollowRange() {
-		return _getOwnerInRange(20.0D);
-	}
-
-	public Player getOwnerInRange() {
-		return _getOwnerInRange(0.0D);
+	private boolean isActiveOwnerInFollowRange() {
+		return activeOwner != null && activeOwner.distanceToSqr(this.getBaseStationPos()) > 20.0D;
 	}
 
 	@Override
@@ -267,20 +252,19 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	@Override
 	protected void addAdditionalSaveData(ValueOutput output) {
 		super.addAdditionalSaveData(output);
-		String ownerStr = this.entityData.get(OWNER_UUID);
-		if (!ownerStr.isEmpty()) output.store("OwnerUuid", Codec.STRING, ownerStr);
 		Vec3 bsp = this.getBaseStationPos();
 		if (bsp != null) output.store("BaseStationPos", Vec3.CODEC, bsp);
 		output.store("IsDocked", Codec.BOOL, this.isDocked());
 		output.store("Items", ItemContainerContents.CODEC,
 			ItemContainerContents.fromItems(this.inventory.getItems()));
 		output.store("BaseDirection", Codec.BYTE, (byte) this.getBaseDirection().get3DDataValue());
+		UUID ownerUuid = this.getOwnerUuid();
+		if (ownerUuid != null) output.store("OwnerUuid", Codec.STRING, ownerUuid.toString());
 	}
 
 	@Override
 	protected void readAdditionalSaveData(ValueInput input) {
 		super.readAdditionalSaveData(input);
-		this.entityData.set(OWNER_UUID, input.read("OwnerUuid", Codec.STRING).orElse(""));
 		input.read("BaseStationPos", Vec3.CODEC).ifPresent(this::setBaseStationPos);
 		input.read("IsDocked", Codec.BOOL)
 			.ifPresent(this::setDocked);
@@ -288,9 +272,11 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 			.ifPresent(contents -> contents.copyInto(this.inventory.getItems()));
 		input.read("BaseDirection", Codec.BYTE)
 			.ifPresent(b -> setBaseDirection(Direction.from3DDataValue(b)));
+		input.read("OwnerUuid", Codec.STRING)
+			.ifPresent(s -> setOwnerUuid(UUID.fromString(s)));
 	}
 
-	public static FlyingChestEntity spawnFromPlacement(ServerLevel level, BlockPos baseStationPos, Direction facing, Player owner) {
+	public static FlyingChestEntity spawnFromPlacement(ServerLevel level, BlockPos baseStationPos, Direction facing) {
 		FlyingChestEntity entity = new FlyingChestEntity(FlyingChests.FLYING_CHEST_ENTITY_TYPE, level);
 		Vec3 bsp = Vec3.atCenterOf(baseStationPos).subtract(0, 0.4, 0);
 		entity.setBaseStationPos(bsp);
@@ -299,7 +285,6 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		entity.snapTo(bsp.x, bsp.y, bsp.z, facing.toYRot(), 0.0F);
 		entity.yHeadRot = yRot;
 		entity.finalizeSpawn((ServerLevelAccessor) level, level.getCurrentDifficultyAt(baseStationPos), EntitySpawnReason.MOB_SUMMONED, null);
-		entity.entityData.set(OWNER_UUID, owner.getUUID().toString());
 		entity.setPersistenceRequired();
 		level.addFreshEntity(entity);
 		return entity;
@@ -320,12 +305,12 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 
 		@Override
 		public boolean canUse() {
-			return this.mob.getOwnerInFollowRange() != null;
+			return this.mob.isActiveOwnerInFollowRange();
 		}
 
 		@Override
 		public boolean canContinueToUse() {
-			return this.mob.getOwnerInFollowRange() != null;
+			return this.mob.isActiveOwnerInFollowRange();
 		}
 
 		@Override
@@ -341,32 +326,27 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 
 		@Override
 		public void tick() {
-			Player owner = this.mob.getOwnerInFollowRange();
-
-			if (owner == null) {
-				return;
-			}
-
-			if (--this.ticksRemaining <= 0) {
-				this.ticksRemaining = calculateTicksRemaining(owner);
-				updateDirection(owner);
-				// chance to look at owner (instead of the target)
-				this.lookAtOwner = this.rng.nextInt(3) == 0; // 1 in 3
-			}
-
-			if (this.lookAtOwner) {
-				this.mob.getLookControl().setLookAt(owner, 45.0F, 90.0F);
+			if (this.mob.isActiveOwnerInFollowRange()) {
+				if (--this.ticksRemaining <= 0) {
+					this.ticksRemaining = calculateTicksRemaining();
+					updateDirection();
+					// chance to look at owner (instead of the target)
+					this.lookAtOwner = this.rng.nextInt(3) == 0; // 1 in 3
+				}
+				if (this.lookAtOwner) {
+					this.mob.getLookControl().setLookAt(this.mob.activeOwner, 45.0F, 90.0F);
+				}
 			}
 		}
 
-		private void updateDirection(@NotNull Player owner){
+		private void updateDirection(){
 			{// if target/mob is close to player and not blocking their narrow fov, theres a chance to linger
 				Vec3 currentTarget = getCurrentTarget();
 				if (
-					owner.distanceToSqr(currentTarget) < 16.0D 
+					this.mob.activeOwner.distanceToSqr(currentTarget) < 16.0D 
 					&& this.rng.nextBoolean() 
 					&& !this.skippedPrevDirectionUpdate
-					&& !isWithinOwnerNarrowFov(owner, currentTarget)
+					&& !isWithinOwnerNarrowFov(this.mob.activeOwner, currentTarget)
 				) {
 					this.skippedPrevDirectionUpdate = true;
 					return;
@@ -377,7 +357,7 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 
 			Vec3 target = null;
 			for (int i = 0; i < 3; i++) {
-				target = sampleCircle(owner, 2.5D);
+				target = sampleCircle(this.mob.activeOwner, 2.5D);
 
 				//shift up from players feet
 				target = target.add(0.0D, 2.0D, 0.0D);
@@ -386,7 +366,7 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 				target = target.add(this.rng.nextGaussian(), this.rng.nextGaussian(), this.rng.nextGaussian());
 
 				// retry if target is blocking view of owner
-				if (!isWithinOwnerNarrowFov(owner, target)) {
+				if (!isWithinOwnerNarrowFov(this.mob.activeOwner, target)) {
 					break;
 				}
 			}
@@ -424,8 +404,8 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 			return lookAlignment >= Math.cos(Math.toRadians(20.0D));
 		}
 
-		private int calculateTicksRemaining(@NotNull Player owner) {
-			final double distSqr = owner.distanceToSqr(getCurrentTarget());
+		private int calculateTicksRemaining() {
+			final double distSqr = this.mob.activeOwner.distanceToSqr(getCurrentTarget());
 			//minimum ticks, half of this is also added pre randomization so distant points still get some randomization
 			final int minTicks = 10;
 			//max ticks before randomization, much higher when close

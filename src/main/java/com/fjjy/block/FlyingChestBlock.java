@@ -68,7 +68,8 @@ public class FlyingChestBlock extends Block implements EntityBlock {
 			return;
 		}
 		Direction facing = state.getValue(FACING);
-		FlyingChestEntity entity = FlyingChestEntity.spawnFromPlacement((ServerLevel) level, pos, facing, (Player) placer);
+		FlyingChestEntity entity = FlyingChestEntity.spawnFromPlacement((ServerLevel) level, pos, facing);
+		entity.setOwnerUuid(placer.getUUID());
 		if (level.getBlockEntity(pos) instanceof FlyingChestBlockEntity blockEntity) {
 			blockEntity.setLinkedEntityUuid(entity.getUUID());
 		}

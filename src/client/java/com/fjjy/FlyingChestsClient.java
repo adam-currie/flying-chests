@@ -1,7 +1,5 @@
 package com.fjjy;
 
-import java.util.Comparator;
-
 import com.fjjy.entity.FlyingChestEntity;
 import com.fjjy.entity.FlyingChestEntityRenderer;
 import com.fjjy.network.OpenFlyingChestPayload;
@@ -24,24 +22,15 @@ public class FlyingChestsClient implements ClientModInitializer {
 
 			if (!client.options.keyInventory.consumeClick()) return;
 
-			var playerId = client.player.getUUID();
-			var owned = client.level.getEntitiesOfClass(
-				FlyingChestEntity.class,
-				client.player.getBoundingBox().inflate(FlyingChestEntity.OWNER_TO_BASE_OPERATING_RANGE),
-				e -> {
-					var owner = e.getOwnerInRange();
-					return owner != null && owner.getUUID().equals(playerId);
-				}
+			FlyingChestEntity nearest = FlyingChests.findActiveChest(
+				client.level, client.player.getUUID(), client.player.position()
 			);
 
-			if (owned.isEmpty()) {
+			if (nearest == null) {
 				client.setScreen(new InventoryScreen(client.player));
 				return;
 			}
 
-			FlyingChestEntity nearest = owned.stream()
-				.min(Comparator.comparingDouble(e -> client.player.distanceToSqr(e.getBaseStationPos())))
-				.orElseThrow();
 			ClientPlayNetworking.send(new OpenFlyingChestPayload(nearest.getId()));
 		});
 	}

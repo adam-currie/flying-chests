@@ -13,8 +13,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
-
-
 public class FlyingChestBlockEntity extends BlockEntity {
 	private UUID linkedEntityUuid;
 
