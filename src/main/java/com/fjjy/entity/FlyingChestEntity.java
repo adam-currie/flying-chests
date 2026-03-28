@@ -174,7 +174,7 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	}
 
 	/**
-	 * gets the owner player if they are online and within operating range of the base station.
+	 * gets the owner player if they are between 5 and 32 blocks
 	 */
 	private Player getOwnerInFollowRange() {
 		if (this.ownerUuid == null) {
@@ -187,7 +187,7 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		final var distSqr = owner.distanceToSqr(Vec3.atCenterOf(this.baseStationPos));
 		return 
 			distSqr <= (double) (MAX_OWNER_RANGE_FROM_BASE * MAX_OWNER_RANGE_FROM_BASE)
-			&& distSqr > 16.0D // if owner is close just go to the base station instead.
+			&& distSqr > 25.0D // if owner is close just go to the base station instead.
 				? owner
 				: null; 
 	}
