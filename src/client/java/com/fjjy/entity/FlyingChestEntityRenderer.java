@@ -52,11 +52,8 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
     @Override
     public void extractRenderState(FlyingChestEntity entity, FlyingChestRenderState state, float partialTick) {
         super.extractRenderState(entity, state, partialTick);
-
-        boolean docked = entity.isDocked();
         Direction baseDirection = entity.getBaseDirection();
-
-        state.yRot = docked ? baseDirection.toYRot() : Mth.rotLerp(partialTick, entity.yHeadRotO, entity.getYHeadRot());
+        state.yRot = entity.isDocked() ? baseDirection.toYRot() : Mth.rotLerp(partialTick, entity.yHeadRotO, entity.getYHeadRot());
         state.lidAngle = Mth.lerp(partialTick, entity.lidAngleO, entity.lidAngle);
         state.wingFlapAngle = ((entity.tickCount + partialTick) * WING_FLAP_SPEED) % 360.0F;
     }
