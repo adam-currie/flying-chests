@@ -237,6 +237,7 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		super.addAdditionalSaveData(output);
 		output.store("OwnerUuid", Codec.STRING, this.ownerUuid.toString());
 		output.store("BaseStationPos", Vec3.CODEC, this.baseStationPos);
+		output.store("IsDocked", Codec.BOOL, this.isDocked());
 		output.store("Items", ItemContainerContents.CODEC,
 			ItemContainerContents.fromItems(this.inventory.getItems()));
 		output.store("BaseDirection", Codec.BYTE, (byte) this.getBaseDirection().get3DDataValue());
@@ -250,6 +251,8 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 			.orElse(null);
 		this.baseStationPos = input.read("BaseStationPos", Vec3.CODEC)
 			.orElse(null);
+		input.read("IsDocked", Codec.BOOL)
+			.ifPresent(this::setDocked);
 		input.read("Items", ItemContainerContents.CODEC)
 			.ifPresent(contents -> contents.copyInto(this.inventory.getItems()));
 		input.read("BaseDirection", Codec.BYTE)
