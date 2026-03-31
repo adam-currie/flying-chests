@@ -10,7 +10,9 @@ import org.slf4j.LoggerFactory;
 import com.fjjy.block.FlyingChestBlock;
 import com.fjjy.blockentity.FlyingChestBlockEntity;
 import com.fjjy.entity.FlyingChestEntity;
-import com.fjjy.network.OpenFlyingChestPayload;
+import com.fjjy.menu.CombinedFlyingChestInventoryMenu;
+import com.fjjy.network.FallbackInventoryPayload;
+import com.fjjy.network.OpenFlyingChestCombinedPayload;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -27,8 +29,11 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
@@ -88,6 +93,12 @@ public class FlyingChests implements ModInitializer {
 		new BlockItem(FLYING_CHEST_BLOCK, new Item.Properties().setId(FLYING_CHEST_KEY))
 	);
 
+	public static final MenuType<CombinedFlyingChestInventoryMenu> COMBINED_CHEST_MENU_TYPE = Registry.register(
+		BuiltInRegistries.MENU,
+		Identifier.fromNamespaceAndPath(MOD_ID, "combined_chest"),
+		new MenuType<>((id, inv) -> new CombinedFlyingChestInventoryMenu(id, inv, new SimpleContainer(54)), FeatureFlags.VANILLA_SET)
+	);
+
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	/**
@@ -123,13 +134,19 @@ public class FlyingChests implements ModInitializer {
 		FabricDefaultAttributeRegistry.register(FLYING_CHEST_ENTITY_TYPE, FlyingChestEntity.createAttributes());
 		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(entries -> entries.accept(FLYING_CHEST));
 
-		PayloadTypeRegistry.playC2S().register(OpenFlyingChestPayload.TYPE, OpenFlyingChestPayload.STREAM_CODEC);
-		ServerPlayNetworking.registerGlobalReceiver(OpenFlyingChestPayload.TYPE, (payload, context) -> {
+		PayloadTypeRegistry.playC2S().register(OpenFlyingChestCombinedPayload.TYPE, OpenFlyingChestCombinedPayload.STREAM_CODEC);
+		PayloadTypeRegistry.playS2C().register(FallbackInventoryPayload.TYPE, FallbackInventoryPayload.STREAM_CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(OpenFlyingChestCombinedPayload.TYPE, (payload, context) -> {
 			context.server().execute(() -> {
+				// executed when the client wants to open their personal inventory with an active flying chest's inventory included
 				var player = context.player();
 				var entity = ((ServerLevel) player.level()).getEntity(payload.entityId());
 				if (entity instanceof FlyingChestEntity chest && chest.activeOwner == player) {
-					player.openMenu(chest);
+					//trigger client to open regular inventory + chest inventory
+					chest.openCombinedInventory(player);
+				} else {
+					// race condition: chest deactivated between client keypress and server handling
+					ServerPlayNetworking.send(player, new FallbackInventoryPayload());
 				}
 			});
 		});
@@ -150,7 +167,8 @@ public class FlyingChests implements ModInitializer {
 				FlyingChestEntity winner = findActiveChest(level, player.getUUID(), player.position());
 				for (FlyingChestEntity chest : chests) {
 					if (player.getUUID().equals(chest.getOwnerUuid())) {
-						chest.activeOwner = (chest == winner) ? player : null;
+						boolean isWinner = chest == winner;
+						chest.setActiveOwner(isWinner ? player : null);
 					}
 				}
 			}

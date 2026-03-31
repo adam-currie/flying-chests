@@ -2,12 +2,14 @@ package com.fjjy.entity;
 
 import java.util.EnumSet;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
+import com.fjjy.FlyingChestOpeningManager;
 import com.fjjy.FlyingChests;
 import com.mojang.serialization.Codec;
 
@@ -19,11 +21,9 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -37,11 +37,7 @@ import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ChestMenu;
-import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -49,7 +45,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 
-public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
+public class FlyingChestEntity extends PathfinderMob {
 
 	private static final EntityDataAccessor<Boolean> IS_DOCKED =
 		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.BOOLEAN);
@@ -57,8 +53,8 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	private static final EntityDataAccessor<Byte> BASE_DIRECTION =
 		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.BYTE);
 
-	private static final EntityDataAccessor<Integer> OPEN_COUNT =
-		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Boolean> IS_OPEN =
+		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.BOOLEAN);
 
 	// NaN y = not yet set
 	private static final EntityDataAccessor<Vector3fc> BASE_STATION_POS =
@@ -67,19 +63,38 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	private static final EntityDataAccessor<String> OWNER_UUID =
 		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.STRING);
 
+	private static final EntityDataAccessor<Boolean> IS_ACTIVE =
+		SynchedEntityData.defineId(FlyingChestEntity.class, EntityDataSerializers.BOOLEAN);
+
 	// Client-side lid animation (0.0 = closed, 1.0 = fully open)
 	public float lidAngle;
 	public float lidAngleO;
 
-	private final SimpleContainer inventory = new SimpleContainer(27);
+	private final SimpleContainer inventory = new SimpleContainer(54);
+
+	public SimpleContainer getInventory() {
+		return inventory;
+	}
 
 	// owner in operating range of the base station when it is the closest owned base to the player, otherwise null
-	public ServerPlayer activeOwner = null;
+	public Player activeOwner = null;
+
+	// Set by client init code to avoid client-only imports in the main module
+	public static Consumer<FlyingChestEntity> onActiveStateChanged = null;
+
+	private final FlyingChestOpeningManager openingManager;
 
 	public FlyingChestEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
 		super(entityType, level);
 		this.moveControl = new FlyingMoveControl(this, 20, true);
 		this.noPhysics = true;
+		this.openingManager = new FlyingChestOpeningManager(this, open -> this.entityData.set(IS_OPEN, open));
+	}
+
+	public void setActiveOwner(@Nullable Player player) {
+		if (this.level().isClientSide()) throw new IllegalStateException("setActiveOwner must only be called on the server");
+		this.activeOwner = player;
+		this.entityData.set(IS_ACTIVE, player != null);
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {
@@ -93,9 +108,10 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		super.defineSynchedData(builder);
 		builder.define(IS_DOCKED, true);
 		builder.define(BASE_DIRECTION, (byte) 2);
-		builder.define(OPEN_COUNT, 0);
+		builder.define(IS_OPEN, false);
 		builder.define(BASE_STATION_POS, new Vector3f(0.0f, Float.NaN, 0.0f));
 		builder.define(OWNER_UUID, "");
+		builder.define(IS_ACTIVE, false);
 	}
 
 	@Nullable
@@ -107,6 +123,11 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	public void setOwnerUuid(@Nullable UUID uuid) {
 		this.entityData.set(OWNER_UUID, uuid == null ? "" : uuid.toString());
 	}
+
+	public boolean isActive() {
+		return this.entityData.get(IS_ACTIVE);
+	}
+
 	public Direction getBaseDirection() {
 		return Direction.from3DDataValue(this.entityData.get(BASE_DIRECTION));
 	}
@@ -124,6 +145,14 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	}
 
 	@Override
+	public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+		super.onSyncedDataUpdated(key);
+		if (key.equals(IS_ACTIVE) && this.level().isClientSide() && onActiveStateChanged != null) {
+			onActiveStateChanged.accept(this);
+		}
+	}
+
+	@Override
 	protected PathNavigation createNavigation(Level level) {
 		FlyingPathNavigation pathNavigation = new FlyingPathNavigation(this, level);
 		pathNavigation.setCanOpenDoors(false);
@@ -137,7 +166,7 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 		super.tick();
 		if (this.level().isClientSide()) {
 			this.lidAngleO = this.lidAngle;
-			if (this.entityData.get(OPEN_COUNT) > 0) {
+			if (this.entityData.get(IS_OPEN)) {
 				this.lidAngle = Math.min(1.0F, this.lidAngle + 0.1F);
 			} else {
 				this.lidAngle = Math.max(0.0F, this.lidAngle - 0.1F);
@@ -148,38 +177,16 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	@Override
 	protected InteractionResult mobInteract(Player player, InteractionHand hand) {
 		if (!this.level().isClientSide() && player instanceof ServerPlayer serverPlayer) {
-			serverPlayer.openMenu(this);
+			openingManager.openRegular(serverPlayer);
 		}
 		return InteractionResult.SUCCESS;
 	}
 
 	@Override
 	public Component getDisplayName() {
-		return Component.translatable("container.chest");
-	}
-
-	@Override
-	@Nullable
-	public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-		int newCount = this.entityData.get(OPEN_COUNT) + 1;
-		this.entityData.set(OPEN_COUNT, newCount);
-		if (newCount == 1) {
-			this.playSound(SoundEvents.CHEST_OPEN, 0.5F, this.level().random.nextFloat() * 0.1F + 0.9F);
-		}
-		return new ChestMenu(MenuType.GENERIC_9x3, containerId, playerInventory, this.inventory, 3) {
-			@Override
-			public void removed(Player p) {
-				super.removed(p);
-				if (!FlyingChestEntity.this.isRemoved()) {
-					int count = Math.max(0, FlyingChestEntity.this.entityData.get(OPEN_COUNT) - 1);
-					FlyingChestEntity.this.entityData.set(OPEN_COUNT, count);
-					if (count == 0) {
-						FlyingChestEntity.this.playSound(SoundEvents.CHEST_CLOSE, 0.5F,
-							FlyingChestEntity.this.level().random.nextFloat() * 0.1F + 0.9F);
-					}
-				}
-			}
-		};
+		return Component.translatable("container.chest").getString().isEmpty()
+			? Component.empty()
+			: Component.translatable("container.flying-chests.flying_chest");
 	}
 
 	@Override
@@ -191,6 +198,10 @@ public class FlyingChestEntity extends PathfinderMob implements MenuProvider {
 	@Override
 	public void travel(Vec3 input) {
 		this.travelFlying(input, this.getSpeed());
+	}
+
+	public void openCombinedInventory(ServerPlayer player) {
+		this.openingManager.openCombined(player);
 	}
 
 	public Vec3 getBaseStationPos() {
