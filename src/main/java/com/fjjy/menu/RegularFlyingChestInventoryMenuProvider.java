@@ -3,7 +3,6 @@ package com.fjjy.menu;
 import java.util.function.Consumer;
 
 import com.fjjy.entity.FlyingChestEntity;
-import com.fjjy.menu.FlyingChestDisplayNameHelper;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.MenuProvider;
