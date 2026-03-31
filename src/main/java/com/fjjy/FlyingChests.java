@@ -54,7 +54,7 @@ public class FlyingChests implements ModInitializer {
 	/* 	range to scan for entities when considering chests to activate, twice the
 		operating range to account for cases like teleportation where the entity 
 		is at the other end of the range, plus 4 to account for random pathing when following player*/
-	public static final double OWNER_TO_CHEST_SCANNING_RANGE_SQR = OWNER_TO_BASE_OPERATING_RANGE_SQR*2 + 4*4;
+	public static final double OWNER_TO_CHEST_SCANNING_RANGE = Math.sqrt(OWNER_TO_BASE_OPERATING_RANGE_SQR)*2 + 4;
 
 	private static final Identifier FLYING_CHEST_ID = Identifier.fromNamespaceAndPath(MOD_ID, "flying_chest_base");
 	private static final Identifier FLYING_CHEST_ENTITY_ID = Identifier.fromNamespaceAndPath(MOD_ID, "flying_chest_entity");
@@ -109,7 +109,7 @@ public class FlyingChests implements ModInitializer {
 	@Nullable
 	public static FlyingChestEntity findActiveChest(Level level, UUID playerId, Vec3 playerPos) {
 		AABB searchBox = AABB.ofSize(playerPos, 1, 1, 1)
-			.inflate(FlyingChests.OWNER_TO_CHEST_SCANNING_RANGE_SQR);
+			.inflate(FlyingChests.OWNER_TO_CHEST_SCANNING_RANGE);
 		List<FlyingChestEntity> candidates = level.getEntitiesOfClass(
 			FlyingChestEntity.class,
 			searchBox,
