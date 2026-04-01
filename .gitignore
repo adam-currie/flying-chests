@@ -42,4 +42,3 @@ replay_*.log
 *.jfr
 
 /assets/
-src/client/java/com/fjjy/todo.txt

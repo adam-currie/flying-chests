@@ -1,0 +1,16 @@
+flying chest base:
+    -add extra locks to the corners of the base, scaling and rotating them to improve the texture
+
+flying entity:
+    -chest looks at active owner while docked, options to turn this off OR make it snap to cardinals
+
+
+
+-need to add a menu in game for selecting which texture to use for the chest and base (they share a texture sheet).
+    -a checkbox that says "use resource pack"
+    -options:
+        -basic
+        -christmas red
+        -christmas green
+        -ender
+        -trapped
