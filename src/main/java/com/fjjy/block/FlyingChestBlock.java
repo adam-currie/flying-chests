@@ -58,7 +58,7 @@ public class FlyingChestBlock extends Block implements EntityBlock {
 
 	@Override
 	public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-		return Shapes.empty();
+		return SHAPE;
 	}
 
 	@Override

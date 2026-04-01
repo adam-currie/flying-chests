@@ -2,6 +2,7 @@ package com.fjjy;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.fjjy.blockentity.FlyingChestBaseBlockEntityRenderer;
 import com.fjjy.entity.FlyingChestEntity;
 import com.fjjy.entity.FlyingChestEntityRenderer;
 import com.fjjy.network.FallbackInventoryPayload;
@@ -11,6 +12,8 @@ import com.fjjy.screen.CombinedInventoryScreen;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.entity.EntityRenderers;
@@ -23,6 +26,8 @@ public class FlyingChestsClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		EntityRenderers.register(FlyingChests.FLYING_CHEST_ENTITY_TYPE, FlyingChestEntityRenderer::new);
+		EntityModelLayerRegistry.registerModelLayer(FlyingChestBaseBlockEntityRenderer.LAYER, FlyingChestBaseBlockEntityRenderer::createLayer);
+		BlockEntityRendererRegistry.register(FlyingChests.FLYING_CHEST_BLOCK_ENTITY_TYPE, FlyingChestBaseBlockEntityRenderer::new);
 		MenuScreens.register(FlyingChests.COMBINED_CHEST_MENU_TYPE, CombinedInventoryScreen::new);
 
 		/* listen for active state change on chests so we can track when the player associated with 
