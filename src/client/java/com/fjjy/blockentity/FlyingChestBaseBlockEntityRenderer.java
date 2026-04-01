@@ -4,6 +4,7 @@ import java.util.EnumSet;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
+import com.fjjy.config.FlyingChestTextureConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -35,10 +36,9 @@ public class FlyingChestBaseBlockEntityRenderer
             Identifier.fromNamespaceAndPath("flying-chests", "textures/block/flying_chest_base.png");
 
     private static Identifier resolveTexture() {
-        if (Minecraft.getInstance().getResourceManager().getResource(CUSTOM_TEXTURE).isPresent()) {
-            return CUSTOM_TEXTURE;
-        }
-        return CHEST_TEXTURE;
+        Identifier resourcePackOverride = Minecraft.getInstance().getResourceManager()
+            .getResource(CUSTOM_TEXTURE).isPresent() ? CUSTOM_TEXTURE : null;
+        return FlyingChestTextureConfig.resolveTexture(resourcePackOverride);
     }
 
     private final ModelPart leg;

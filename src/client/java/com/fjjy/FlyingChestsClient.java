@@ -3,6 +3,7 @@ package com.fjjy;
 import org.jetbrains.annotations.Nullable;
 
 import com.fjjy.blockentity.FlyingChestBaseBlockEntityRenderer;
+import com.fjjy.config.FlyingChestTextureConfig;
 import com.fjjy.entity.FlyingChestEntity;
 import com.fjjy.entity.FlyingChestEntityRenderer;
 import com.fjjy.network.FallbackInventoryPayload;
@@ -25,6 +26,8 @@ public class FlyingChestsClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		FlyingChestTextureConfig.init();
+
 		EntityRenderers.register(FlyingChests.FLYING_CHEST_ENTITY_TYPE, FlyingChestEntityRenderer::new);
 		EntityModelLayerRegistry.registerModelLayer(FlyingChestBaseBlockEntityRenderer.LAYER, FlyingChestBaseBlockEntityRenderer::createLayer);
 		BlockEntityRendererRegistry.register(FlyingChests.FLYING_CHEST_BLOCK_ENTITY_TYPE, FlyingChestBaseBlockEntityRenderer::new);

@@ -1,4 +1,15 @@
 {
   "item.flying-chests.flying_chest": "Flying Chest",
-  "container.flying-chests.flying_chest": "Flying Chest"
+  "container.flying-chests.flying_chest": "Flying Chest",
+
+  "flying-chests.texture_config": "Flying Chest Texture",
+  "flying-chests.texture_config.useResourcePack": "Use Resource Pack Textures",
+  "flying-chests.texture_config.useResourcePack.desc": "When enabled, the flying chest uses vanilla minecraft chest texture paths, so resource packs that change chest textures will also affect it. When disabled, bundled texture copies are used instead, which are unaffected by resource packs targeting the minecraft namespace.",
+  "flying-chests.texture_config.variant": "Chest Variant",
+  "flying-chests.texture_config.variant.desc": "Which chest texture style to use.",
+
+  "flying-chests.variant.BASIC": "Basic",
+  "flying-chests.variant.CHRISTMAS": "Christmas",
+  "flying-chests.variant.ENDER": "Ender",
+  "flying-chests.variant.TRAPPED": "Trapped"
 }

@@ -1,5 +1,6 @@
 package com.fjjy.entity;
 
+import com.fjjy.config.FlyingChestTextureConfig;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 
@@ -69,7 +70,7 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
         poseStack.scale(0.6F, 0.6F, 0.6F);
         poseStack.translate(-0.5, 0.4, -0.5); 
-        var chestRenderType = RenderTypes.entitySolid(CHEST_TEXTURE);
+        var chestRenderType = RenderTypes.entitySolid(FlyingChestTextureConfig.resolveTexture(null));
         this.chestLid.resetPose();
         this.chestLock.resetPose();
         this.chestLid.xRot = -(float) (Math.PI / 2.0) * state.lidAngle;
