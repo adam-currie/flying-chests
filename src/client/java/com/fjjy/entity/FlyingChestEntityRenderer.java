@@ -14,21 +14,16 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 
 public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity, FlyingChestEntityRenderer.FlyingChestRenderState> {
-    private static final Identifier CHEST_TEXTURE = Identifier.withDefaultNamespace("textures/entity/chest/normal.png");
-    private static final Identifier BEE_TEXTURE = Identifier.withDefaultNamespace("textures/entity/bee/bee.png");
-
-    private static final float WING_FLAP_SPEED = 120.0F; // degrees per second
-    private static final float WING_MAX_ANGLE_DEG = 25.0F;
 
     private final ModelPart chestBase;
     private final ModelPart chestLid;
     private final ModelPart chestLock;
-    private final ModelPart leftWing;
-    private final ModelPart rightWing;
+
+    // Wing renderers indexed by WingVariant.ordinal(): [0]=BEE, [1]=ALLAY, [2]=BAT
+    private final WingRenderer[] wingRenderers;
 
     public FlyingChestEntityRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -39,10 +34,11 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         this.chestLid = chestRoot.getChild("lid");
         this.chestLock = chestRoot.getChild("lock");
 
-        ModelPart beeRoot = context.bakeLayer(ModelLayers.BEE);
-        ModelPart bone = beeRoot.getChild("bone");
-        this.rightWing = bone.getChild("right_wing");
-        this.leftWing  = bone.getChild("left_wing");
+        this.wingRenderers = new WingRenderer[]{
+            new BeeWingRenderer(context),
+            new AllayWingRenderer(context),
+            new BatWingRenderer(context)
+        };
     }
 
     @Override
@@ -56,7 +52,7 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         Direction baseDirection = entity.getBaseDirection();
         state.yRot = entity.isDocked() ? baseDirection.toYRot() : Mth.rotLerp(partialTick, entity.yHeadRotO, entity.getYHeadRot());
         state.lidAngle = Mth.lerp(partialTick, entity.lidAngleO, entity.lidAngle);
-        state.wingFlapAngle = ((entity.tickCount + partialTick) * WING_FLAP_SPEED) % 360.0F;
+        state.wingTickTime = entity.tickCount + partialTick;
     }
 
     @Override
@@ -68,9 +64,9 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         // Render chest body + lid using direct model parts
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
-        poseStack.scale(0.6F, 0.6F, 0.6F);
+        poseStack.scale(0.63F, 0.63F, 0.63F);
         poseStack.translate(-0.5, 0.4, -0.5); 
-        var chestRenderType = RenderTypes.entitySolid(FlyingChestTextureConfig.resolveTexture(null));
+        var chestRenderType = RenderTypes.entitySolid(FlyingChestTextureConfig.resolveChestTexture());
         this.chestLid.resetPose();
         this.chestLock.resetPose();
         this.chestLid.xRot = -(float) (Math.PI / 2.0) * state.lidAngle;
@@ -80,25 +76,10 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         submitNodeCollector.submitModelPart(this.chestLock, poseStack, chestRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
         poseStack.popPose();
 
-        // Render bee wings anchored to the top of the chest
-        float flapRad = WING_MAX_ANGLE_DEG * Mth.DEG_TO_RAD * Mth.sin(state.wingFlapAngle * Mth.DEG_TO_RAD);
-        rightWing.resetPose();
-        leftWing.resetPose();
-        rightWing.zRot = -flapRad;
-        leftWing.zRot =  flapRad;
-
-        poseStack.pushPose();
-        poseStack.translate(0.0, 0.9, 0.0);
-        var wingRenderType = RenderTypes.entityTranslucent(BEE_TEXTURE);
-        poseStack.pushPose();
-        poseStack.translate(-0.1, 0.0, 0.0);
-        submitNodeCollector.submitModelPart(rightWing, poseStack, wingRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
-        poseStack.popPose();
-        poseStack.pushPose();
-        poseStack.translate(0.1, 0.0, 0.0);
-        submitNodeCollector.submitModelPart(leftWing, poseStack, wingRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
-        poseStack.popPose();
-        poseStack.popPose();
+        // Delegate wing rendering to the active variant's renderer
+        int wIdx = FlyingChestTextureConfig.INSTANCE.wingsVariant.ordinal();
+        wingRenderers[wIdx].render(poseStack, submitNodeCollector, state.lightCoords,
+                state.wingTickTime, FlyingChestTextureConfig.resolveWingsTexture());
 
         poseStack.popPose();
         super.submit(state, poseStack, submitNodeCollector, cameraRenderState);
@@ -106,7 +87,7 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
 
     public static class FlyingChestRenderState extends EntityRenderState {
         public float yRot;
-        public float wingFlapAngle;
+        public float wingTickTime;
         public float lidAngle;
     }
 }

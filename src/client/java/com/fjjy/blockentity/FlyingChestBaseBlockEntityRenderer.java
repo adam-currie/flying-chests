@@ -29,16 +29,13 @@ public class FlyingChestBaseBlockEntityRenderer
     public static final ModelLayerLocation LAYER =
             new ModelLayerLocation(Identifier.fromNamespaceAndPath("flying-chests", "flying_chest_base"), "main");
 
-    private static final Identifier CHEST_TEXTURE =
-            Identifier.withDefaultNamespace("textures/entity/chest/normal.png");
-
     private static final Identifier CUSTOM_TEXTURE =
             Identifier.fromNamespaceAndPath("flying-chests", "textures/block/flying_chest_base.png");
 
     private static Identifier resolveTexture() {
         Identifier resourcePackOverride = Minecraft.getInstance().getResourceManager()
             .getResource(CUSTOM_TEXTURE).isPresent() ? CUSTOM_TEXTURE : null;
-        return FlyingChestTextureConfig.resolveTexture(resourcePackOverride);
+        return FlyingChestTextureConfig.resolveBaseTexture(resourcePackOverride);
     }
 
     private final ModelPart leg;

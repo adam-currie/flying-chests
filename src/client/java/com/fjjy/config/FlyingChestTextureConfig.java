@@ -3,6 +3,7 @@ package com.fjjy.config;
 import me.fzzyhmstrs.fzzy_config.api.ConfigApiJava;
 import me.fzzyhmstrs.fzzy_config.api.RegisterType;
 import me.fzzyhmstrs.fzzy_config.config.Config;
+import me.fzzyhmstrs.fzzy_config.config.ConfigGroup;
 import me.fzzyhmstrs.fzzy_config.util.EnumTranslatable;
 
 import net.minecraft.resources.Identifier;
@@ -18,12 +19,31 @@ public class FlyingChestTextureConfig extends Config {
         super(Identifier.fromNamespaceAndPath("flying-chests", "texture_config"));
     }
 
-    public boolean useResourcePack = false;
-    public Variant variant = Variant.BASIC;
+    // ---- Flying Chest group ----
 
-    public enum Variant implements EnumTranslatable {
-        // modTexture = flying-chests namespace (not overrideable by resource packs targeting minecraft:)
-        // mcTexture  = minecraft namespace (follows whatever the resource pack does to chest textures)
+    public ConfigGroup chestGroup = new ConfigGroup("chest");
+    public boolean chestUseResourcePack = false;
+    @ConfigGroup.Pop
+    public ChestVariant chestVariant = ChestVariant.BASIC;
+
+    // ---- Base Station group ----
+
+    public ConfigGroup baseGroup = new ConfigGroup("base");
+    public boolean baseUseResourcePack = false;
+    @ConfigGroup.Pop
+    public ChestVariant baseVariant = ChestVariant.BASIC;
+
+    // ---- Wings group ----
+
+    public ConfigGroup wingsGroup = new ConfigGroup("wings");
+    public boolean wingsUseResourcePack = false;
+    public WingVariant wingsVariant = WingVariant.BEE;
+    @ConfigGroup.Pop
+    public float flapSpeed = 1.0F;
+
+    // ---- Variants ----
+
+    public enum ChestVariant implements EnumTranslatable {
         BASIC     ("textures/entity/chest/normal.png"),
         CHRISTMAS ("textures/entity/chest/christmas.png"),
         ENDER     ("textures/entity/chest/ender.png"),
@@ -32,7 +52,7 @@ public class FlyingChestTextureConfig extends Config {
         public final Identifier modTexture;
         public final Identifier mcTexture;
 
-        Variant(String path) {
+        ChestVariant(String path) {
             this.modTexture = Identifier.fromNamespaceAndPath("flying-chests", path);
             this.mcTexture  = Identifier.withDefaultNamespace(path);
         }
@@ -40,28 +60,49 @@ public class FlyingChestTextureConfig extends Config {
         @NotNull
         @Override
         public String prefix() {
-            return "flying-chests.variant";
+            return "flying-chests.chest_variant";
         }
     }
 
-    /**
-     * Resolves which texture identifier to use.
-     *
-     * useResourcePack = false (default): uses flying-chests-namespaced copies of the vanilla textures.
-     *   Resource packs that override minecraft:textures/entity/chest/*.png will NOT affect the flying chest.
-     *
-     * useResourcePack = true: uses minecraft-namespaced paths, so resource packs that change vanilla
-     *   chest textures will also change the flying chest. The base station additionally checks for a
-     *   flying-chests:textures/block/flying_chest_base.png resource pack override (passed as resourcePackOverride).
-     */
-    public static Identifier resolveTexture(Identifier resourcePackOverride) {
-        if (INSTANCE.useResourcePack) {
+    public enum WingVariant implements EnumTranslatable {
+        BEE   ("textures/entity/bee/bee.png"),
+        ALLAY ("textures/entity/allay/allay.png"),
+        BAT   ("textures/entity/bat.png");
+
+        public final Identifier modTexture;
+        public final Identifier mcTexture;
+
+        WingVariant(String path) {
+            this.modTexture = Identifier.fromNamespaceAndPath("flying-chests", path);
+            this.mcTexture  = Identifier.withDefaultNamespace(path);
+        }
+
+        @NotNull
+        @Override
+        public String prefix() {
+            return "flying-chests.wing_variant";
+        }
+    }
+
+    // ---- Resolve methods ----
+
+    public static Identifier resolveChestTexture() {
+        return INSTANCE.chestUseResourcePack ? INSTANCE.chestVariant.mcTexture : INSTANCE.chestVariant.modTexture;
+    }
+
+    public static Identifier resolveBaseTexture(Identifier resourcePackOverride) {
+        if (INSTANCE.baseUseResourcePack) {
             if (resourcePackOverride != null)
                 return resourcePackOverride;
-            return INSTANCE.variant.mcTexture;
+            return INSTANCE.baseVariant.mcTexture;
         }
-        return INSTANCE.variant.modTexture;
+        return INSTANCE.baseVariant.modTexture;
+    }
+
+    public static Identifier resolveWingsTexture() {
+        return INSTANCE.wingsUseResourcePack ? INSTANCE.wingsVariant.mcTexture : INSTANCE.wingsVariant.modTexture;
     }
 
     public static void init() {}
 }
+

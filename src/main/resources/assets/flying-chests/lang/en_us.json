@@ -2,14 +2,35 @@
   "item.flying-chests.flying_chest": "Flying Chest",
   "container.flying-chests.flying_chest": "Flying Chest",
 
-  "flying-chests.texture_config": "Flying Chest Texture",
-  "flying-chests.texture_config.useResourcePack": "Use Resource Pack Textures",
-  "flying-chests.texture_config.useResourcePack.desc": "When enabled, the flying chest uses vanilla minecraft chest texture paths, so resource packs that change chest textures will also affect it. When disabled, bundled texture copies are used instead, which are unaffected by resource packs targeting the minecraft namespace.",
-  "flying-chests.texture_config.variant": "Chest Variant",
-  "flying-chests.texture_config.variant.desc": "Which chest texture style to use.",
+  "flying-chests.texture_config": "Flying Chest Settings",
 
-  "flying-chests.variant.BASIC": "Basic",
-  "flying-chests.variant.CHRISTMAS": "Christmas",
-  "flying-chests.variant.ENDER": "Ender",
-  "flying-chests.variant.TRAPPED": "Trapped"
+  "flying-chests.texture_config.chestGroup": "Flying Chest",
+  "flying-chests.texture_config.chestUseResourcePack": "Use Resource Pack Textures",
+  "flying-chests.texture_config.chestUseResourcePack.desc": "When enabled, uses vanilla minecraft chest texture paths so resource packs that change chest textures will also affect the flying chest. When disabled, bundled texture copies are used and are unaffected by resource packs.",
+  "flying-chests.texture_config.chestVariant": "Chest Variant",
+  "flying-chests.texture_config.chestVariant.desc": "Which chest texture style to use for the flying chest.",
+
+  "flying-chests.texture_config.baseGroup": "Base Station",
+  "flying-chests.texture_config.baseUseResourcePack": "Use Resource Pack Textures",
+  "flying-chests.texture_config.baseUseResourcePack.desc": "When enabled, uses vanilla minecraft chest texture paths so resource packs that change chest textures will also affect the base station. When disabled, bundled texture copies are used and are unaffected by resource packs.",
+  "flying-chests.texture_config.baseVariant": "Chest Variant",
+  "flying-chests.texture_config.baseVariant.desc": "Which chest texture style to use for the base station.",
+
+  "flying-chests.texture_config.wingsGroup": "Wings",
+  "flying-chests.texture_config.wingsUseResourcePack": "Use Resource Pack Textures",
+  "flying-chests.texture_config.wingsUseResourcePack.desc": "When enabled, uses vanilla minecraft entity texture paths so resource packs that change bee, allay, or bat textures will also affect the wings. When disabled, bundled texture copies are used and are unaffected by resource packs.",
+  "flying-chests.texture_config.wingsVariant": "Wing Style",
+  "flying-chests.texture_config.wingsVariant.desc": "Which wing model and texture to use.",
+
+  "flying-chests.texture_config.flapSpeed": "Flap Speed",
+  "flying-chests.texture_config.flapSpeed.desc": "Multiplier for wing flap animation speed across all wing types. Default is 1.0.",
+
+  "flying-chests.chest_variant.BASIC": "Basic",
+  "flying-chests.chest_variant.CHRISTMAS": "Christmas",
+  "flying-chests.chest_variant.ENDER": "Ender",
+  "flying-chests.chest_variant.TRAPPED": "Trapped",
+
+  "flying-chests.wing_variant.BEE": "Bee",
+  "flying-chests.wing_variant.ALLAY": "Allay",
+  "flying-chests.wing_variant.BAT": "Bat"
 }
