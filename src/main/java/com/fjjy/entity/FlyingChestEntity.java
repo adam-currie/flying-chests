@@ -87,7 +87,6 @@ public class FlyingChestEntity extends PathfinderMob {
 	public FlyingChestEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
 		super(entityType, level);
 		this.moveControl = new FlyingMoveControl(this, 20, true);
-		this.noPhysics = true;
 		this.openingManager = new FlyingChestOpeningManager(this, open -> this.entityData.set(IS_OPEN, open));
 	}
 
@@ -248,6 +247,18 @@ public class FlyingChestEntity extends PathfinderMob {
 	@Override
 	public boolean canCollideWith(Entity entity) {
 		return false;
+	}
+
+	@Override
+	protected void doPush(Entity entity) {
+		if (entity instanceof Player) return;
+		super.doPush(entity);
+	}
+
+	@Override
+	public void push(Entity entity) {
+		if (entity instanceof Player) return;
+		super.push(entity);
 	}
 
 	@Override
@@ -455,8 +466,10 @@ public class FlyingChestEntity extends PathfinderMob {
 
 		@Override
 		public void tick() {
+
+
+			// Snap to base station position when docking finishes
 			if (!this.mob.getNavigation().isInProgress()) {
-				// Snap to base station position when docking finishes
 				Vec3 bsp = this.mob.getBaseStationPos();
 				if (bsp != null) this.mob.setPos(bsp);
 				this.mob.setDeltaMovement(Vec3.ZERO);
