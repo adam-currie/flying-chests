@@ -312,7 +312,7 @@ public class FlyingChestEntity extends PathfinderMob {
 
 	public static FlyingChestEntity spawnFromPlacement(ServerLevel level, BlockPos baseStationPos, Direction facing) {
 		FlyingChestEntity entity = new FlyingChestEntity(FlyingChests.FLYING_CHEST_ENTITY_TYPE, level);
-		Vec3 bsp = Vec3.atCenterOf(baseStationPos).subtract(0, 0.4, 0);
+		Vec3 bsp = Vec3.atCenterOf(baseStationPos).subtract(0, .43, 0);
 		entity.setBaseStationPos(bsp);
 		final var yRot = facing.toYRot();
 		entity.setBaseDirection(facing);
