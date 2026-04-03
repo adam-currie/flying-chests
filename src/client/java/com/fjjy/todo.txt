@@ -3,3 +3,5 @@ flying chest base:
 
 flying entity:
     -chest looks at active owner while docked, options to turn this off OR make it snap to cardinals
+
+-dont dock when no LOS to owner in range
