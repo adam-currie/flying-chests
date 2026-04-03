@@ -11,6 +11,7 @@ import org.joml.Vector3fc;
 
 import com.fjjy.FlyingChestOpeningManager;
 import com.fjjy.FlyingChests;
+import com.fjjy.block.FlyingChestBlock;
 import com.mojang.serialization.Codec;
 
 import net.minecraft.core.BlockPos;
@@ -41,6 +42,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
@@ -141,6 +143,16 @@ public class FlyingChestEntity extends PathfinderMob {
 
 	public void setDocked(boolean docked) {
 		this.entityData.set(IS_DOCKED, docked);
+		if (!this.level().isClientSide()) {
+			Vec3 bsp = this.getBaseStationPos();
+			if (bsp != null) {
+				BlockPos blockPos = BlockPos.containing(bsp);
+				BlockState state = this.level().getBlockState(blockPos);
+				if (state.hasProperty(FlyingChestBlock.IS_DOCKED)) {
+					this.level().setBlockAndUpdate(blockPos, state.setValue(FlyingChestBlock.IS_DOCKED, docked));
+				}
+			}
+		}
 	}
 
 	@Override

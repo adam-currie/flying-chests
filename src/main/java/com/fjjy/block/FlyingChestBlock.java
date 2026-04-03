@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -26,11 +27,14 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 public class FlyingChestBlock extends Block implements EntityBlock {
 
 	public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
+	public static final BooleanProperty IS_DOCKED = BooleanProperty.create("is_docked");
 	private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 3, 16);
+	private static final VoxelShape BODY_SHAPE = Block.box(2, 2, 2, 14, 14, 14);
+	private static final VoxelShape DOCKED_SHAPE = Shapes.or(SHAPE, BODY_SHAPE);
 
 	public FlyingChestBlock(Properties properties) {
 		super(properties);
-		this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
+		this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(IS_DOCKED, true));
 	}
 
 	@Override
@@ -40,7 +44,7 @@ public class FlyingChestBlock extends Block implements EntityBlock {
 
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-		builder.add(FACING);
+		builder.add(FACING, IS_DOCKED);
 	}
 
 	@Override
@@ -53,12 +57,12 @@ public class FlyingChestBlock extends Block implements EntityBlock {
 
 	@Override
 	public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-		return SHAPE;
+		return state.getValue(IS_DOCKED) ? DOCKED_SHAPE : SHAPE;
 	}
 
 	@Override
 	public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-		return SHAPE;
+		return state.getValue(IS_DOCKED) ? DOCKED_SHAPE : SHAPE;
 	}
 
 	@Override
