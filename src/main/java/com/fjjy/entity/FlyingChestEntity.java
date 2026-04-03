@@ -23,6 +23,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -31,6 +32,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -280,6 +282,19 @@ public class FlyingChestEntity extends PathfinderMob {
 	@Override
 	public boolean hurtServer(ServerLevel level, DamageSource damageSource, float amount) {
 		return false;
+	}
+
+	@Override
+	protected void playBlockFallSound() {
+	}
+
+	@Override
+	protected void playStepSound(BlockPos pos, BlockState state) {
+	}
+
+	@Override
+	public LivingEntity.Fallsounds getFallSounds() {
+		return new LivingEntity.Fallsounds(SoundEvents.EMPTY, SoundEvents.EMPTY);
 	}
 
 	@Override
