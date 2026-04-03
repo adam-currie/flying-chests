@@ -79,7 +79,7 @@ public class FlyingChests implements ModInitializer {
 		BuiltInRegistries.ENTITY_TYPE,
 		FLYING_CHEST_ENTITY_ID,
 		EntityType.Builder.of(FlyingChestEntity::new, MobCategory.CREATURE)
-			.sized(0.6F, 0.9F)
+			.sized(0.6F, 0.75F)
 			.clientTrackingRange(8)
 			.updateInterval(3)
 			.build(FLYING_CHEST_ENTITY_KEY)

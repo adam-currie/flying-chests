@@ -34,8 +34,8 @@ public class FlyingChestBlock extends Block implements EntityBlock {
 
 	public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 	public static final BooleanProperty IS_DOCKED = BooleanProperty.create("is_docked");
-	private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 3, 16);
-	private static final VoxelShape BODY_SHAPE = Block.box(3, 0, 3, 12, 14, 12);
+	private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 4, 16);
+	private static final VoxelShape BODY_SHAPE = Block.box(3.6, 4, 3.6, 12.4, 14, 12.4);
 	private static final VoxelShape DOCKED_SHAPE = Shapes.or(SHAPE, BODY_SHAPE);
 
 	public FlyingChestBlock(Properties properties) {
