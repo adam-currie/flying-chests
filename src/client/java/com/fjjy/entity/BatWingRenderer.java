@@ -3,6 +3,7 @@ package com.fjjy.entity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 
+import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -20,15 +21,17 @@ class BatWingRenderer extends WingRenderer {
     private static final float LEFT_OFFSET_X    =  0.1F;
 
     BatWingRenderer(EntityRendererProvider.Context context) {
-        super(extractRight(context), extractLeft(context), SPEED_MULTIPLIER);
+        this(context.bakeLayer(ModelLayers.BAT));
     }
 
-    private static ModelPart extractRight(EntityRendererProvider.Context context) {
-        return context.bakeLayer(ModelLayers.BAT).getChild("body").getChild("right_wing");
+    BatWingRenderer(EntityModelSet modelSet) {
+        this(modelSet.bakeLayer(ModelLayers.BAT));
     }
 
-    private static ModelPart extractLeft(EntityRendererProvider.Context context) {
-        return context.bakeLayer(ModelLayers.BAT).getChild("body").getChild("left_wing");
+    private BatWingRenderer(ModelPart batRoot) {
+        super(batRoot.getChild("body").getChild("right_wing"),
+              batRoot.getChild("body").getChild("left_wing"),
+              SPEED_MULTIPLIER);
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.fjjy.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
+import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -15,17 +16,17 @@ class AllayWingRenderer extends WingRenderer {
     private static final float MAX_ANGLE_DEG    = 28.0F;
 
     AllayWingRenderer(EntityRendererProvider.Context context) {
-        super(extractRight(context), extractLeft(context), SPEED_MULTIPLIER);
+        this(context.bakeLayer(ModelLayers.ALLAY));
     }
 
-    private static ModelPart extractRight(EntityRendererProvider.Context context) {
-        ModelPart baked = context.bakeLayer(ModelLayers.ALLAY);
-        return baked.getChild("root").getChild("body").getChild("right_wing");
+    AllayWingRenderer(EntityModelSet modelSet) {
+        this(modelSet.bakeLayer(ModelLayers.ALLAY));
     }
 
-    private static ModelPart extractLeft(EntityRendererProvider.Context context) {
-        ModelPart baked = context.bakeLayer(ModelLayers.ALLAY);
-        return baked.getChild("root").getChild("body").getChild("left_wing");
+    private AllayWingRenderer(ModelPart allayRoot) {
+        super(allayRoot.getChild("root").getChild("body").getChild("right_wing"),
+              allayRoot.getChild("root").getChild("body").getChild("left_wing"),
+              SPEED_MULTIPLIER);
     }
 
     @Override

@@ -6,6 +6,7 @@ import com.fjjy.blockentity.FlyingChestBaseBlockEntityRenderer;
 import com.fjjy.config.FlyingChestTextureConfig;
 import com.fjjy.entity.FlyingChestEntity;
 import com.fjjy.entity.FlyingChestEntityRenderer;
+import com.fjjy.entity.FlyingChestItemRenderer;
 import com.fjjy.network.FallbackInventoryPayload;
 import com.fjjy.network.OpenFlyingChestCombinedPayload;
 import com.fjjy.screen.CombinedInventoryScreen;
@@ -18,6 +19,8 @@ import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.client.renderer.special.SpecialModelRenderers;
+import net.minecraft.resources.Identifier;
 
 public class FlyingChestsClient implements ClientModInitializer {
 
@@ -34,6 +37,10 @@ public class FlyingChestsClient implements ClientModInitializer {
 		EntityModelLayerRegistry.registerModelLayer(FlyingChestBaseBlockEntityRenderer.LAYER, FlyingChestBaseBlockEntityRenderer::createLayer);
 		BlockEntityRendererRegistry.register(FlyingChests.FLYING_CHEST_BLOCK_ENTITY_TYPE, FlyingChestBaseBlockEntityRenderer::new);
 		MenuScreens.register(FlyingChests.COMBINED_CHEST_MENU_TYPE, CombinedInventoryScreen::new);
+		SpecialModelRenderers.ID_MAPPER.put(
+			Identifier.fromNamespaceAndPath(FlyingChests.MOD_ID, "flying_chest_item"),
+			FlyingChestItemRenderer.Unbaked.CODEC
+		);
 
 		/* listen for active state change on chests so we can track when the player associated with 
 		   this client has an active chest that it should open with their inventory */

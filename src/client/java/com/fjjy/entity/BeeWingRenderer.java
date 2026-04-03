@@ -2,6 +2,7 @@ package com.fjjy.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
+import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -18,15 +19,17 @@ class BeeWingRenderer extends WingRenderer {
     private static final float LEFT_OFFSET_X    =  0.1F;
 
     BeeWingRenderer(EntityRendererProvider.Context context) {
-        super(extractRight(context), extractLeft(context), SPEED_MULTIPLIER);
+        this(context.bakeLayer(ModelLayers.BEE));
     }
 
-    private static ModelPart extractRight(EntityRendererProvider.Context context) {
-        return context.bakeLayer(ModelLayers.BEE).getChild("bone").getChild("right_wing");
+    BeeWingRenderer(EntityModelSet modelSet) {
+        this(modelSet.bakeLayer(ModelLayers.BEE));
     }
 
-    private static ModelPart extractLeft(EntityRendererProvider.Context context) {
-        return context.bakeLayer(ModelLayers.BEE).getChild("bone").getChild("left_wing");
+    private BeeWingRenderer(ModelPart beeRoot) {
+        super(beeRoot.getChild("bone").getChild("right_wing"),
+              beeRoot.getChild("bone").getChild("left_wing"),
+              SPEED_MULTIPLIER);
     }
 
     @Override
