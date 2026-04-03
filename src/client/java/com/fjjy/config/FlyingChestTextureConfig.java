@@ -19,6 +19,10 @@ public class FlyingChestTextureConfig extends Config {
         super(Identifier.fromNamespaceAndPath("flying-chests", "texture_config"));
     }
 
+    // ---- Behaviour ----
+
+    public boolean allowRightClickWhileFlying = false;
+
     // ---- Flying Chest group ----
 
     public ConfigGroup chestGroup = new ConfigGroup("chest");

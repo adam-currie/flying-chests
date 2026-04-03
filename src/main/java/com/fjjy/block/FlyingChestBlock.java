@@ -3,9 +3,14 @@ package com.fjjy.block;
 import com.fjjy.blockentity.FlyingChestBlockEntity;
 import com.fjjy.entity.FlyingChestEntity;
 
+import java.util.UUID;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -20,6 +25,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -29,7 +35,7 @@ public class FlyingChestBlock extends Block implements EntityBlock {
 	public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 	public static final BooleanProperty IS_DOCKED = BooleanProperty.create("is_docked");
 	private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 3, 16);
-	private static final VoxelShape BODY_SHAPE = Block.box(2, 2, 2, 14, 14, 14);
+	private static final VoxelShape BODY_SHAPE = Block.box(3, 0, 3, 12, 14, 12);
 	private static final VoxelShape DOCKED_SHAPE = Shapes.or(SHAPE, BODY_SHAPE);
 
 	public FlyingChestBlock(Properties properties) {
@@ -63,6 +69,22 @@ public class FlyingChestBlock extends Block implements EntityBlock {
 	@Override
 	public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
 		return state.getValue(IS_DOCKED) ? DOCKED_SHAPE : SHAPE;
+	}
+
+	@Override
+	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+		if (!state.getValue(IS_DOCKED)) return InteractionResult.PASS;
+		if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer
+				&& level.getBlockEntity(pos) instanceof FlyingChestBlockEntity blockEntity) {
+			UUID uuid = blockEntity.getLinkedEntityUuid();
+			if (uuid != null) {
+				Entity entity = ((ServerLevel) level).getEntity(uuid);
+				if (entity instanceof FlyingChestEntity chest) {
+					chest.openInventory(serverPlayer);
+				}
+			}
+		}
+		return InteractionResult.SUCCESS;
 	}
 
 	@Override

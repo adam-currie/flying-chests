@@ -28,6 +28,8 @@ public class FlyingChestsClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		FlyingChestTextureConfig.init();
 
+		FlyingChestEntity.allowRightClickWhileFlying = () -> FlyingChestTextureConfig.INSTANCE.allowRightClickWhileFlying;
+
 		EntityRenderers.register(FlyingChests.FLYING_CHEST_ENTITY_TYPE, FlyingChestEntityRenderer::new);
 		EntityModelLayerRegistry.registerModelLayer(FlyingChestBaseBlockEntityRenderer.LAYER, FlyingChestBaseBlockEntityRenderer::createLayer);
 		BlockEntityRendererRegistry.register(FlyingChests.FLYING_CHEST_BLOCK_ENTITY_TYPE, FlyingChestBaseBlockEntityRenderer::new);

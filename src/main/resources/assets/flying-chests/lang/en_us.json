@@ -4,6 +4,9 @@
 
   "flying-chests.texture_config": "Flying Chest Settings",
 
+  "flying-chests.texture_config.allowRightClickWhileFlying": "Allow Right Click While Flying",
+  "flying-chests.texture_config.allowRightClickWhileFlying.desc": "When enabled, the flying chest can be opened by right-clicking while it is away from its base. When disabled (default), right-clicking only works while the chest is docked.",
+
   "flying-chests.texture_config.chestGroup": "Flying Chest",
   "flying-chests.texture_config.chestUseResourcePack": "Use Resource Pack Textures",
   "flying-chests.texture_config.chestUseResourcePack.desc": "When enabled, uses vanilla minecraft chest texture paths so resource packs that change chest textures will also affect the flying chest. When disabled, bundled texture copies are used and are unaffected by resource packs.",

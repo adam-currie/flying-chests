@@ -2,6 +2,7 @@ package com.fjjy.entity;
 
 import java.util.EnumSet;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import org.jetbrains.annotations.NotNull;
@@ -83,6 +84,7 @@ public class FlyingChestEntity extends PathfinderMob {
 
 	// Set by client init code to avoid client-only imports in the main module
 	public static Consumer<FlyingChestEntity> onActiveStateChanged = null;
+	public static BooleanSupplier allowRightClickWhileFlying = () -> false;
 
 	private final FlyingChestOpeningManager openingManager;
 
@@ -187,8 +189,9 @@ public class FlyingChestEntity extends PathfinderMob {
 
 	@Override
 	protected InteractionResult mobInteract(Player player, InteractionHand hand) {
-		if (!this.level().isClientSide() && player instanceof ServerPlayer serverPlayer) {
+		if (player instanceof ServerPlayer serverPlayer) {
 			openingManager.openRegular(serverPlayer);
+			return InteractionResult.CONSUME;
 		}
 		return InteractionResult.SUCCESS;
 	}
@@ -213,6 +216,10 @@ public class FlyingChestEntity extends PathfinderMob {
 
 	public void openCombinedInventory(ServerPlayer player) {
 		this.openingManager.openCombined(player);
+	}
+
+	public void openInventory(ServerPlayer player) {
+		this.openingManager.openRegular(player);
 	}
 
 	public Vec3 getBaseStationPos() {
@@ -243,7 +250,7 @@ public class FlyingChestEntity extends PathfinderMob {
 
 	@Override
 	public boolean isPickable() {
-		return this.isDocked();
+		return this.isDocked() || allowRightClickWhileFlying.getAsBoolean();
 	}
 
 	@Override
@@ -257,20 +264,17 @@ public class FlyingChestEntity extends PathfinderMob {
 	}
 
 	@Override
-	public boolean canCollideWith(Entity entity) {
-		return false;
-	}
-
-	@Override
 	protected void doPush(Entity entity) {
-		if (entity instanceof Player) return;
-		super.doPush(entity);
+		if (isDocked() || !(entity instanceof Player)) {
+			super.doPush(entity);
+		}
 	}
 
 	@Override
 	public void push(Entity entity) {
-		if (entity instanceof Player) return;
-		super.push(entity);
+		if (isDocked() || !(entity instanceof Player)) {
+			super.push(entity);
+		}
 	}
 
 	@Override
