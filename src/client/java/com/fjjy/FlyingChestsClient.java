@@ -27,6 +27,7 @@ public class FlyingChestsClient implements ClientModInitializer {
 	@Nullable
 	private static FlyingChestEntity activeClientChest = null;
 
+
 	@Override
 	public void onInitializeClient() {
 		FlyingChestTextureConfig.init();

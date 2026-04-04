@@ -2,7 +2,6 @@ package com.fjjy.entity;
 
 import java.util.function.Consumer;
 
-import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
@@ -21,7 +20,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
-public class FlyingChestItemRenderer implements SpecialModelRenderer<Void> {
+public class FlyingChestItemRenderer implements SpecialModelRenderer<FlyingChestItemRenderer.ConfigSnapshot> {
 
 	private final ModelPart chestBase;
 	private final ModelPart chestLid;
@@ -37,17 +36,22 @@ public class FlyingChestItemRenderer implements SpecialModelRenderer<Void> {
 	}
 
 	@Override
-	public void submit(@Nullable Void data, ItemDisplayContext displayContext, PoseStack poseStack,
+	public void submit(ConfigSnapshot data, ItemDisplayContext displayContext, PoseStack poseStack,
 			SubmitNodeCollector collector, int lightCoords, int overlay, boolean hasFoil, int seed) {
 		Minecraft mc = Minecraft.getInstance();
-		float tickTime = mc.level != null ? (float) mc.level.getGameTime() : 0f;
+		boolean inHand = displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND
+				|| displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND
+				|| displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
+				|| displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND;
+		float tickTime = mc.level != null ? mc.level.getGameTime() + mc.getDeltaTracker().getGameTimeDeltaPartialTick(true) : 0f;
 
 		// Chest/Body
+		var chestTex = FlyingChestTextureConfig.resolveChestTexture();
+		var chestRenderType = RenderTypes.entitySolid(chestTex);
 		poseStack.pushPose();
 		poseStack.translate(0.5, 0.5, 0.5);
 		poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
 		poseStack.translate(-0.5, -0.5, -0.5);
-		var chestRenderType = RenderTypes.entitySolid(FlyingChestTextureConfig.resolveChestTexture());
 		chestLid.resetPose();
 		chestLock.resetPose();
 		collector.submitModelPart(chestBase, poseStack, chestRenderType, lightCoords, OverlayTexture.NO_OVERLAY, null);
@@ -60,8 +64,13 @@ public class FlyingChestItemRenderer implements SpecialModelRenderer<Void> {
 		poseStack.pushPose();
 		poseStack.translate(0.5, -0.42, 0.5);
         poseStack.scale(1.66F, 1.66F, 1.66F);
-		wingRenderers[wIdx].render(poseStack, collector, lightCoords,
-				tickTime, FlyingChestTextureConfig.resolveWingsTexture());
+		if (inHand) {
+			wingRenderers[wIdx].render(poseStack, collector, lightCoords,
+					tickTime, FlyingChestTextureConfig.resolveWingsTexture());
+		} else {
+			wingRenderers[wIdx].renderResting(poseStack, collector, lightCoords,
+					FlyingChestTextureConfig.resolveWingsTexture());
+		}
 		poseStack.popPose();
 	}
 
@@ -72,10 +81,17 @@ public class FlyingChestItemRenderer implements SpecialModelRenderer<Void> {
 	}
 
 	@Override
-	@Nullable
-	public Void extractArgument(ItemStack stack) {
-		return null;
+	public ConfigSnapshot extractArgument(ItemStack stack) {
+		FlyingChestTextureConfig cfg = FlyingChestTextureConfig.INSTANCE;
+		return new ConfigSnapshot(cfg.chestVariant, cfg.chestUseResourcePack, cfg.wingsVariant, cfg.wingsUseResourcePack);
 	}
+
+	public record ConfigSnapshot(
+		FlyingChestTextureConfig.ChestVariant chestVariant,
+		boolean chestUseResourcePack,
+		FlyingChestTextureConfig.WingVariant wingsVariant,
+		boolean wingsUseResourcePack
+	) {}
 
 	public static class Unbaked implements SpecialModelRenderer.Unbaked {
 
@@ -103,4 +119,5 @@ public class FlyingChestItemRenderer implements SpecialModelRenderer<Void> {
 			);
 		}
 	}
+
 }

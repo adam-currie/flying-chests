@@ -30,6 +30,30 @@ class AllayWingRenderer extends WingRenderer {
     }
 
     @Override
+    void renderResting(PoseStack poseStack, SubmitNodeCollector collector,
+                       int lightCoords, Identifier texture) {
+        rightWing.resetPose();
+        leftWing.resetPose();
+        leftWing.xRot  = rightWing.xRot = .5f;
+        leftWing.zRot  = rightWing.zRot = (float) Math.PI;
+        leftWing.yRot  = -.55f - flapRad(270.0F, MAX_ANGLE_DEG);
+        rightWing.yRot =  .55f + flapRad(270.0F, MAX_ANGLE_DEG);
+
+        var renderType = RenderTypes.entityTranslucent(texture);
+        poseStack.pushPose();
+        poseStack.translate(0.0, .75, 0.0);
+        poseStack.pushPose();
+        poseStack.translate(-0.24F, 0.0, 0.0);
+        submitWing(rightWing, poseStack, collector, renderType, lightCoords);
+        poseStack.popPose();
+        poseStack.pushPose();
+        poseStack.translate(0.24F, 0.0, 0.0);
+        submitWing(leftWing, poseStack, collector, renderType, lightCoords);
+        poseStack.popPose();
+        poseStack.popPose();
+    }
+
+    @Override
     void render(PoseStack poseStack, SubmitNodeCollector collector,
                 int lightCoords, float tickTime, Identifier texture) {
         float flap = flapRad(computeFlapAngle(tickTime), MAX_ANGLE_DEG);

@@ -41,6 +41,10 @@ abstract class WingRenderer {
         return (tickTime * speed) % 360.0F;
     }
 
+    /** Renders the wings in their resting pose for non-hand display contexts (hotbar, inventory, ground). */
+    abstract void renderResting(PoseStack poseStack, SubmitNodeCollector collector,
+                                int lightCoords, Identifier texture);
+
     /** Helper: submit a single wing part with a given render type. */
     protected void submitWing(ModelPart part, PoseStack poseStack, SubmitNodeCollector collector,
                                net.minecraft.client.renderer.rendertype.RenderType renderType, int lightCoords) {

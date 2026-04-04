@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 
 class BeeWingRenderer extends WingRenderer {
 
@@ -30,6 +31,30 @@ class BeeWingRenderer extends WingRenderer {
         super(beeRoot.getChild("bone").getChild("right_wing"),
               beeRoot.getChild("bone").getChild("left_wing"),
               SPEED_MULTIPLIER);
+    }
+
+    @Override
+    void renderResting(PoseStack poseStack, SubmitNodeCollector collector,
+                       int lightCoords, Identifier texture) {
+        rightWing.resetPose();
+        leftWing.resetPose();
+        rightWing.zRot =  64.0f * Mth.DEG_TO_RAD;
+        leftWing.zRot  = -64.0f * Mth.DEG_TO_RAD;
+        rightWing.xRot = -20.0F * Mth.DEG_TO_RAD;
+        leftWing.xRot  = -20.0F * Mth.DEG_TO_RAD;
+
+        var renderType = RenderTypes.entityTranslucent(texture);
+        poseStack.pushPose();
+        poseStack.translate(0.0, TRANSLATE_Y, 0.1F);
+        poseStack.pushPose();
+        poseStack.translate(RIGHT_OFFSET_X, 0.0, 0.0);
+        submitWing(rightWing, poseStack, collector, renderType, lightCoords);
+        poseStack.popPose();
+        poseStack.pushPose();
+        poseStack.translate(LEFT_OFFSET_X, 0.0, 0.0);
+        submitWing(leftWing, poseStack, collector, renderType, lightCoords);
+        poseStack.popPose();
+        poseStack.popPose();
     }
 
     @Override
