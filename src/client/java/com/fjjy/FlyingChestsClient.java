@@ -6,6 +6,7 @@ import com.fjjy.blockentity.FlyingChestBaseBlockEntityRenderer;
 import com.fjjy.config.FlyingChestTextureConfig;
 import com.fjjy.entity.FlyingChestEntity;
 import com.fjjy.entity.FlyingChestEntityRenderer;
+import com.fjjy.entity.TamedFlyingChestEntity;
 import com.fjjy.entity.FlyingChestItemRenderer;
 import com.fjjy.network.FallbackInventoryPayload;
 import com.fjjy.network.OpenFlyingChestCombinedPayload;
@@ -25,16 +26,17 @@ import net.minecraft.resources.Identifier;
 public class FlyingChestsClient implements ClientModInitializer {
 
 	@Nullable
-	private static FlyingChestEntity activeClientChest = null;
+	private static TamedFlyingChestEntity activeClientChest = null;
 
 
 	@Override
 	public void onInitializeClient() {
 		FlyingChestTextureConfig.init();
 
-		FlyingChestEntity.allowRightClickWhileFlying = () -> FlyingChestTextureConfig.INSTANCE.allowRightClickWhileFlying;
+		TamedFlyingChestEntity.allowRightClickWhileFlying = () -> FlyingChestTextureConfig.INSTANCE.allowRightClickWhileFlying;
 
 		EntityRenderers.register(FlyingChests.FLYING_CHEST_ENTITY_TYPE, FlyingChestEntityRenderer::new);
+		EntityRenderers.register(FlyingChests.WILD_FLYING_CHEST_ENTITY_TYPE, FlyingChestEntityRenderer::new);
 		EntityModelLayerRegistry.registerModelLayer(FlyingChestBaseBlockEntityRenderer.LAYER, FlyingChestBaseBlockEntityRenderer::createLayer);
 		BlockEntityRendererRegistry.register(FlyingChests.FLYING_CHEST_BLOCK_ENTITY_TYPE, FlyingChestBaseBlockEntityRenderer::new);
 		MenuScreens.register(FlyingChests.COMBINED_CHEST_MENU_TYPE, CombinedInventoryScreen::new);
@@ -45,7 +47,7 @@ public class FlyingChestsClient implements ClientModInitializer {
 
 		/* listen for active state change on chests so we can track when the player associated with 
 		   this client has an active chest that it should open with their inventory */
-		FlyingChestEntity.onActiveStateChanged = chest -> {
+		TamedFlyingChestEntity.onActiveStateChanged = chest -> {
 			net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
 			if (mc.player == null) return;
 			java.util.UUID localUuid = mc.player.getUUID();

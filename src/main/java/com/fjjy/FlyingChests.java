@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import com.fjjy.block.FlyingChestBlock;
 import com.fjjy.blockentity.FlyingChestBlockEntity;
 import com.fjjy.entity.FlyingChestEntity;
+import com.fjjy.entity.TamedFlyingChestEntity;
+import com.fjjy.entity.WildFlyingChestEntity;
 import com.fjjy.menu.CombinedFlyingChestInventoryMenu;
 import com.fjjy.network.FallbackInventoryPayload;
 import com.fjjy.network.OpenFlyingChestCombinedPayload;
@@ -58,6 +60,7 @@ public class FlyingChests implements ModInitializer {
 
 	private static final Identifier FLYING_CHEST_ID = Identifier.fromNamespaceAndPath(MOD_ID, "flying_chest_base");
 	private static final Identifier FLYING_CHEST_ENTITY_ID = Identifier.fromNamespaceAndPath(MOD_ID, "flying_chest_entity");
+	private static final Identifier WILD_FLYING_CHEST_ENTITY_ID = Identifier.fromNamespaceAndPath(MOD_ID, "wild_flying_chest_entity");
 
 	private static final ResourceKey<net.minecraft.world.level.block.Block> FLYING_CHEST_BLOCK_KEY =
 		ResourceKey.create(Registries.BLOCK, FLYING_CHEST_ID);
@@ -75,14 +78,26 @@ public class FlyingChests implements ModInitializer {
 
 	private static final ResourceKey<EntityType<?>> FLYING_CHEST_ENTITY_KEY =
 		ResourceKey.create(Registries.ENTITY_TYPE, FLYING_CHEST_ENTITY_ID);
-	public static final EntityType<FlyingChestEntity> FLYING_CHEST_ENTITY_TYPE = Registry.register(
+	public static final EntityType<TamedFlyingChestEntity> FLYING_CHEST_ENTITY_TYPE = Registry.register(
 		BuiltInRegistries.ENTITY_TYPE,
 		FLYING_CHEST_ENTITY_ID,
-		EntityType.Builder.of(FlyingChestEntity::new, MobCategory.CREATURE)
+		EntityType.Builder.of(TamedFlyingChestEntity::new, MobCategory.CREATURE)
 			.sized(0.6F, 0.75F)
 			.clientTrackingRange(8)
 			.updateInterval(3)
 			.build(FLYING_CHEST_ENTITY_KEY)
+	);
+
+	private static final ResourceKey<EntityType<?>> WILD_FLYING_CHEST_ENTITY_KEY =
+		ResourceKey.create(Registries.ENTITY_TYPE, WILD_FLYING_CHEST_ENTITY_ID);
+	public static final EntityType<WildFlyingChestEntity> WILD_FLYING_CHEST_ENTITY_TYPE = Registry.register(
+		BuiltInRegistries.ENTITY_TYPE,
+		WILD_FLYING_CHEST_ENTITY_ID,
+		EntityType.Builder.of(WildFlyingChestEntity::new, MobCategory.CREATURE)
+			.sized(0.6F, 0.75F)
+			.clientTrackingRange(8)
+			.updateInterval(3)
+			.build(WILD_FLYING_CHEST_ENTITY_KEY)
 	);
 
 	private static final ResourceKey<Item> FLYING_CHEST_KEY =
@@ -107,17 +122,17 @@ public class FlyingChests implements ModInitializer {
 	 * Works on both client and server since ownerUuid is synced via SynchedEntityData.
 	 */
 	@Nullable
-	public static FlyingChestEntity findActiveChest(Level level, UUID playerId, Vec3 playerPos) {
+	public static TamedFlyingChestEntity findActiveChest(Level level, UUID playerId, Vec3 playerPos) {
 		AABB searchBox = AABB.ofSize(playerPos, 1, 1, 1)
 			.inflate(FlyingChests.OWNER_TO_CHEST_SCANNING_RANGE);
-		List<FlyingChestEntity> candidates = level.getEntitiesOfClass(
-			FlyingChestEntity.class,
+		List<TamedFlyingChestEntity> candidates = level.getEntitiesOfClass(
+			TamedFlyingChestEntity.class,
 			searchBox,
 			e -> playerId.equals(e.getOwnerUuid())
 		);
-		FlyingChestEntity winner = null;
+		TamedFlyingChestEntity winner = null;
 		double winnerDistSqr = Double.MAX_VALUE;
-		for (FlyingChestEntity chest : candidates) {
+		for (TamedFlyingChestEntity chest : candidates) {
 			Vec3 bsp = chest.getBaseStationPos();
 			if (bsp == null) continue;
 			double distSqr = playerPos.distanceToSqr(bsp);
@@ -131,7 +146,8 @@ public class FlyingChests implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		FabricDefaultAttributeRegistry.register(FLYING_CHEST_ENTITY_TYPE, FlyingChestEntity.createAttributes());
+		FabricDefaultAttributeRegistry.register(FLYING_CHEST_ENTITY_TYPE, TamedFlyingChestEntity.createAttributes());
+		FabricDefaultAttributeRegistry.register(WILD_FLYING_CHEST_ENTITY_TYPE, WildFlyingChestEntity.createAttributes());
 		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(entries -> entries.accept(FLYING_CHEST));
 
 		PayloadTypeRegistry.playC2S().register(OpenFlyingChestCombinedPayload.TYPE, OpenFlyingChestCombinedPayload.STREAM_CODEC);
@@ -141,7 +157,7 @@ public class FlyingChests implements ModInitializer {
 				// executed when the client wants to open their personal inventory with an active flying chest's inventory included
 				var player = context.player();
 				var entity = ((ServerLevel) player.level()).getEntity(payload.entityId());
-				if (entity instanceof FlyingChestEntity chest && chest.activeOwner == player) {
+				if (entity instanceof TamedFlyingChestEntity chest && chest.activeOwner == player) {
 					//trigger client to open regular inventory + chest inventory
 					chest.openCombinedInventory(player);
 				} else {
@@ -161,11 +177,11 @@ public class FlyingChests implements ModInitializer {
 	private void onServerTick(MinecraftServer server) {
 		if (++this.tickCounter % 10 != 0) return;
 		for (ServerLevel level : server.getAllLevels()) {
-			List<? extends FlyingChestEntity> chests = level.getEntities(FLYING_CHEST_ENTITY_TYPE, e -> true);
+			List<? extends TamedFlyingChestEntity> chests = level.getEntities(FLYING_CHEST_ENTITY_TYPE, e -> true);
 			if (chests.isEmpty()) continue;
 			for (ServerPlayer player : level.players()) {
-				FlyingChestEntity winner = findActiveChest(level, player.getUUID(), player.position());
-				for (FlyingChestEntity chest : chests) {
+				TamedFlyingChestEntity winner = findActiveChest(level, player.getUUID(), player.position());
+				for (TamedFlyingChestEntity chest : chests) {
 					if (player.getUUID().equals(chest.getOwnerUuid())) {
 						boolean isWinner = chest == winner;
 						chest.setActiveOwner(isWinner ? player : null);

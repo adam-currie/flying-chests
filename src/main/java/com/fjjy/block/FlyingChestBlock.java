@@ -1,7 +1,7 @@
 package com.fjjy.block;
 
 import com.fjjy.blockentity.FlyingChestBlockEntity;
-import com.fjjy.entity.FlyingChestEntity;
+import com.fjjy.entity.TamedFlyingChestEntity;
 
 import java.util.UUID;
 
@@ -79,7 +79,7 @@ public class FlyingChestBlock extends Block implements EntityBlock {
 			UUID uuid = blockEntity.getLinkedEntityUuid();
 			if (uuid != null) {
 				Entity entity = ((ServerLevel) level).getEntity(uuid);
-				if (entity instanceof FlyingChestEntity chest) {
+				if (entity instanceof TamedFlyingChestEntity chest) {
 					chest.openInventory(serverPlayer);
 				}
 			}
@@ -94,7 +94,7 @@ public class FlyingChestBlock extends Block implements EntityBlock {
 			return;
 		}
 		Direction facing = state.getValue(FACING);
-		FlyingChestEntity entity = FlyingChestEntity.spawnFromPlacement((ServerLevel) level, pos, facing);
+		TamedFlyingChestEntity entity = TamedFlyingChestEntity.spawnFromPlacement((ServerLevel) level, pos, facing);
 		entity.setOwnerUuid(placer.getUUID());
 		if (level.getBlockEntity(pos) instanceof FlyingChestBlockEntity blockEntity) {
 			blockEntity.setLinkedEntityUuid(entity.getUUID());
