@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 
@@ -53,6 +54,7 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         state.yRot = entity.isDocked() ? baseDirection.toYRot() : Mth.rotLerp(partialTick, entity.yHeadRotO, entity.getYHeadRot());
         state.lidAngle = Mth.lerp(partialTick, entity.lidAngleO, entity.lidAngle);
         state.wingTickTime = entity.tickCount + partialTick;
+        state.breakStage = entity instanceof WildFlyingChestEntity wild ? wild.getBreakProgress() : 0;
     }
 
     @Override
@@ -61,11 +63,11 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - state.yRot));
 
-        // Render chest body + lid using direct model parts
+        // Render chest body + lid
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
         poseStack.scale(0.63F, 0.63F, 0.63F);
-        poseStack.translate(-0.5, 0.4, -0.5); 
+        poseStack.translate(-0.5, 0.4, -0.5);
         var chestRenderType = RenderTypes.entitySolid(FlyingChestTextureConfig.resolveChestTexture());
         this.chestLid.resetPose();
         this.chestLock.resetPose();
@@ -74,6 +76,49 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         submitNodeCollector.submitModelPart(this.chestBase, poseStack, chestRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
         submitNodeCollector.submitModelPart(this.chestLid, poseStack, chestRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
         submitNodeCollector.submitModelPart(this.chestLock, poseStack, chestRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
+
+        // replicating block breaking overlay: 6 flat quads, one per face, with the 16x16 destroy_stage texture
+        if (state.breakStage > 0) {
+            int crackIdx = Math.max(0, Math.min(ModelBakery.DESTROY_TYPES.size() - 1, state.breakStage - 1));
+            var crumbleType = ModelBakery.DESTROY_TYPES.get(crackIdx);
+            final float x0 = 0.06f, x1 = 0.94f;
+            final float y0 = 0.0f, y1 = 0.875f;
+            final float z0 = 0.06f, z1 = 0.94f;
+            final int lm = state.lightCoords;
+            final int ov = OverlayTexture.NO_OVERLAY;
+            submitNodeCollector.submitCustomGeometry(poseStack, crumbleType, (pose, buf) -> {
+                // Top (y+)
+                buf.addVertex(pose,x0,y1,z0).setColor(-1).setUv(0,0).setOverlay(ov).setLight(lm).setNormal(pose,0,1,0);
+                buf.addVertex(pose,x0,y1,z1).setColor(-1).setUv(0,1).setOverlay(ov).setLight(lm).setNormal(pose,0,1,0);
+                buf.addVertex(pose,x1,y1,z1).setColor(-1).setUv(1,1).setOverlay(ov).setLight(lm).setNormal(pose,0,1,0);
+                buf.addVertex(pose,x1,y1,z0).setColor(-1).setUv(1,0).setOverlay(ov).setLight(lm).setNormal(pose,0,1,0);
+                // Bottom (y-)
+                buf.addVertex(pose,x0,y0,z1).setColor(-1).setUv(0,0).setOverlay(ov).setLight(lm).setNormal(pose,0,-1,0);
+                buf.addVertex(pose,x0,y0,z0).setColor(-1).setUv(0,1).setOverlay(ov).setLight(lm).setNormal(pose,0,-1,0);
+                buf.addVertex(pose,x1,y0,z0).setColor(-1).setUv(1,1).setOverlay(ov).setLight(lm).setNormal(pose,0,-1,0);
+                buf.addVertex(pose,x1,y0,z1).setColor(-1).setUv(1,0).setOverlay(ov).setLight(lm).setNormal(pose,0,-1,0);
+                // Front (z+)
+                buf.addVertex(pose,x1,y1,z1).setColor(-1).setUv(0,0).setOverlay(ov).setLight(lm).setNormal(pose,0,0,1);
+                buf.addVertex(pose,x0,y1,z1).setColor(-1).setUv(1,0).setOverlay(ov).setLight(lm).setNormal(pose,0,0,1);
+                buf.addVertex(pose,x0,y0,z1).setColor(-1).setUv(1,1).setOverlay(ov).setLight(lm).setNormal(pose,0,0,1);
+                buf.addVertex(pose,x1,y0,z1).setColor(-1).setUv(0,1).setOverlay(ov).setLight(lm).setNormal(pose,0,0,1);
+                // Back (z-)
+                buf.addVertex(pose,x0,y1,z0).setColor(-1).setUv(0,0).setOverlay(ov).setLight(lm).setNormal(pose,0,0,-1);
+                buf.addVertex(pose,x1,y1,z0).setColor(-1).setUv(1,0).setOverlay(ov).setLight(lm).setNormal(pose,0,0,-1);
+                buf.addVertex(pose,x1,y0,z0).setColor(-1).setUv(1,1).setOverlay(ov).setLight(lm).setNormal(pose,0,0,-1);
+                buf.addVertex(pose,x0,y0,z0).setColor(-1).setUv(0,1).setOverlay(ov).setLight(lm).setNormal(pose,0,0,-1);
+                // Right (x+)
+                buf.addVertex(pose,x1,y1,z0).setColor(-1).setUv(0,0).setOverlay(ov).setLight(lm).setNormal(pose,1,0,0);
+                buf.addVertex(pose,x1,y1,z1).setColor(-1).setUv(1,0).setOverlay(ov).setLight(lm).setNormal(pose,1,0,0);
+                buf.addVertex(pose,x1,y0,z1).setColor(-1).setUv(1,1).setOverlay(ov).setLight(lm).setNormal(pose,1,0,0);
+                buf.addVertex(pose,x1,y0,z0).setColor(-1).setUv(0,1).setOverlay(ov).setLight(lm).setNormal(pose,1,0,0);
+                // Left (x-)
+                buf.addVertex(pose,x0,y1,z1).setColor(-1).setUv(0,0).setOverlay(ov).setLight(lm).setNormal(pose,-1,0,0);
+                buf.addVertex(pose,x0,y1,z0).setColor(-1).setUv(1,0).setOverlay(ov).setLight(lm).setNormal(pose,-1,0,0);
+                buf.addVertex(pose,x0,y0,z0).setColor(-1).setUv(1,1).setOverlay(ov).setLight(lm).setNormal(pose,-1,0,0);
+                buf.addVertex(pose,x0,y0,z1).setColor(-1).setUv(0,1).setOverlay(ov).setLight(lm).setNormal(pose,-1,0,0);
+            });
+        }
         poseStack.popPose();
 
         // Delegate wing rendering to the active variant's renderer
@@ -89,5 +134,7 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         public float yRot;
         public float wingTickTime;
         public float lidAngle;
+        /** 0 = not breaking, 1-10 = crack stages (maps to destroy_stage_1 through destroy_stage_9) */
+        public byte breakStage;
     }
 }

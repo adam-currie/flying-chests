@@ -4,9 +4,9 @@ import org.jetbrains.annotations.Nullable;
 
 import com.fjjy.blockentity.FlyingChestBaseBlockEntityRenderer;
 import com.fjjy.config.FlyingChestTextureConfig;
-import com.fjjy.entity.FlyingChestEntity;
 import com.fjjy.entity.FlyingChestEntityRenderer;
 import com.fjjy.entity.TamedFlyingChestEntity;
+import com.fjjy.entity.WildChestBreakHandler;
 import com.fjjy.entity.FlyingChestItemRenderer;
 import com.fjjy.network.FallbackInventoryPayload;
 import com.fjjy.network.OpenFlyingChestCombinedPayload;
@@ -27,7 +27,6 @@ public class FlyingChestsClient implements ClientModInitializer {
 
 	@Nullable
 	private static TamedFlyingChestEntity activeClientChest = null;
-
 
 	@Override
 	public void onInitializeClient() {
@@ -76,5 +75,7 @@ public class FlyingChestsClient implements ClientModInitializer {
 			if (!client.options.keyInventory.consumeClick()) return;
 			ClientPlayNetworking.send(new OpenFlyingChestCombinedPayload(activeClientChest.getId()));
 		});
+
+		new WildChestBreakHandler().register();
 	}
 }

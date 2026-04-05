@@ -9,12 +9,13 @@ import org.slf4j.LoggerFactory;
 
 import com.fjjy.block.FlyingChestBlock;
 import com.fjjy.blockentity.FlyingChestBlockEntity;
-import com.fjjy.entity.FlyingChestEntity;
+import com.fjjy.config.FlyingChestConfig;
 import com.fjjy.entity.TamedFlyingChestEntity;
 import com.fjjy.entity.WildFlyingChestEntity;
 import com.fjjy.menu.CombinedFlyingChestInventoryMenu;
 import com.fjjy.network.FallbackInventoryPayload;
 import com.fjjy.network.OpenFlyingChestCombinedPayload;
+import com.fjjy.network.WildChestBreakStatePayload;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -146,11 +147,13 @@ public class FlyingChests implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		FlyingChestConfig.init();
 		FabricDefaultAttributeRegistry.register(FLYING_CHEST_ENTITY_TYPE, TamedFlyingChestEntity.createAttributes());
 		FabricDefaultAttributeRegistry.register(WILD_FLYING_CHEST_ENTITY_TYPE, WildFlyingChestEntity.createAttributes());
 		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(entries -> entries.accept(FLYING_CHEST));
 
 		PayloadTypeRegistry.playC2S().register(OpenFlyingChestCombinedPayload.TYPE, OpenFlyingChestCombinedPayload.STREAM_CODEC);
+		PayloadTypeRegistry.playC2S().register(WildChestBreakStatePayload.TYPE, WildChestBreakStatePayload.STREAM_CODEC);
 		PayloadTypeRegistry.playS2C().register(FallbackInventoryPayload.TYPE, FallbackInventoryPayload.STREAM_CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(OpenFlyingChestCombinedPayload.TYPE, (payload, context) -> {
 			context.server().execute(() -> {
@@ -163,6 +166,19 @@ public class FlyingChests implements ModInitializer {
 				} else {
 					// race condition: chest deactivated between client keypress and server handling
 					ServerPlayNetworking.send(player, new FallbackInventoryPayload());
+				}
+			});
+		});
+
+		ServerPlayNetworking.registerGlobalReceiver(WildChestBreakStatePayload.TYPE, (payload, context) -> {
+			context.server().execute(() -> {
+				var player = context.player();
+				var entity = ((ServerLevel) player.level()).getEntity(payload.entityId());
+				if (!(entity instanceof WildFlyingChestEntity chest)) return;
+				switch (payload.state()) {
+					case START -> chest.onBreakStartOrResume(player);
+					case PAUSE -> chest.onBreakPause(player);
+					case STOP  -> chest.onBreakStop(player);
 				}
 			});
 		});
