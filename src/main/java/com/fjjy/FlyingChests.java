@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fjjy.block.FlyingChestBlock;
 import com.fjjy.blockentity.FlyingChestBlockEntity;
-import com.fjjy.config.FlyingChestConfig;
+import com.fjjy.config.FlyingChestServerConfig;
 import com.fjjy.entity.TamedFlyingChestEntity;
 import com.fjjy.entity.WildFlyingChestEntity;
 import com.fjjy.menu.CombinedFlyingChestInventoryMenu;
@@ -147,7 +147,7 @@ public class FlyingChests implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		FlyingChestConfig.init();
+		FlyingChestServerConfig.init();
 		FabricDefaultAttributeRegistry.register(FLYING_CHEST_ENTITY_TYPE, TamedFlyingChestEntity.createAttributes());
 		FabricDefaultAttributeRegistry.register(WILD_FLYING_CHEST_ENTITY_TYPE, WildFlyingChestEntity.createAttributes());
 		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(entries -> entries.accept(FLYING_CHEST));

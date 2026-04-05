@@ -1,6 +1,6 @@
 package com.fjjy.entity;
 
-import com.fjjy.config.FlyingChestTextureConfig;
+import com.fjjy.config.FlyingChestClientConfig;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.model.geom.ModelPart;
@@ -37,7 +37,7 @@ abstract class WingRenderer {
 
     /** Computes the current flap angle in degrees using this variant's speed and the global config multiplier. */
     protected float computeFlapAngle(float tickTime) {
-        float speed = BASE_FLAP_SPEED * speedMultiplier * FlyingChestTextureConfig.INSTANCE.flapSpeed;
+        float speed = BASE_FLAP_SPEED * speedMultiplier * FlyingChestClientConfig.INSTANCE.flapSpeed;
         return (tickTime * speed) % 360.0F;
     }
 

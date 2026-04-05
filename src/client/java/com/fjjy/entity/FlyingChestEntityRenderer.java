@@ -1,6 +1,6 @@
 package com.fjjy.entity;
 
-import com.fjjy.config.FlyingChestTextureConfig;
+import com.fjjy.config.FlyingChestClientConfig;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 
@@ -68,7 +68,7 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
         poseStack.scale(0.63F, 0.63F, 0.63F);
         poseStack.translate(-0.5, 0.4, -0.5);
-        var chestRenderType = RenderTypes.entitySolid(FlyingChestTextureConfig.resolveChestTexture());
+        var chestRenderType = RenderTypes.entitySolid(FlyingChestClientConfig.resolveChestTexture());
         this.chestLid.resetPose();
         this.chestLock.resetPose();
         this.chestLid.xRot = -(float) (Math.PI / 2.0) * state.lidAngle;
@@ -122,9 +122,9 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         poseStack.popPose();
 
         // Delegate wing rendering to the active variant's renderer
-        int wIdx = FlyingChestTextureConfig.INSTANCE.wingsVariant.ordinal();
+        int wIdx = FlyingChestClientConfig.INSTANCE.wingsVariant.ordinal();
         wingRenderers[wIdx].render(poseStack, submitNodeCollector, state.lightCoords,
-                state.wingTickTime, FlyingChestTextureConfig.resolveWingsTexture());
+                state.wingTickTime, FlyingChestClientConfig.resolveWingsTexture());
 
         poseStack.popPose();
         super.submit(state, poseStack, submitNodeCollector, cameraRenderState);

@@ -10,13 +10,13 @@ import net.minecraft.resources.Identifier;
 
 import org.jetbrains.annotations.NotNull;
 
-public class FlyingChestTextureConfig extends Config {
+public class FlyingChestClientConfig extends Config {
 
-    public static final FlyingChestTextureConfig INSTANCE =
-        ConfigApiJava.registerAndLoadConfig(FlyingChestTextureConfig::new, RegisterType.CLIENT);
+    public static final FlyingChestClientConfig INSTANCE =
+        ConfigApiJava.registerAndLoadConfig(FlyingChestClientConfig::new, RegisterType.CLIENT);
 
-    public FlyingChestTextureConfig() {
-        super(Identifier.fromNamespaceAndPath("flying-chests", "texture_config"));
+    public FlyingChestClientConfig() {
+        super(Identifier.fromNamespaceAndPath("flying-chests", "client_config"));
     }
 
     // ---- Behaviour ----

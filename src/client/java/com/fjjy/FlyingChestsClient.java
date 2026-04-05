@@ -3,7 +3,7 @@ package com.fjjy;
 import org.jetbrains.annotations.Nullable;
 
 import com.fjjy.blockentity.FlyingChestBaseBlockEntityRenderer;
-import com.fjjy.config.FlyingChestTextureConfig;
+import com.fjjy.config.FlyingChestClientConfig;
 import com.fjjy.entity.FlyingChestEntityRenderer;
 import com.fjjy.entity.TamedFlyingChestEntity;
 import com.fjjy.entity.WildChestBreakHandler;
@@ -30,9 +30,9 @@ public class FlyingChestsClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
-		FlyingChestTextureConfig.init();
+		FlyingChestClientConfig.init();
 
-		TamedFlyingChestEntity.allowRightClickWhileFlying = () -> FlyingChestTextureConfig.INSTANCE.allowRightClickWhileFlying;
+		TamedFlyingChestEntity.allowRightClickWhileFlying = () -> FlyingChestClientConfig.INSTANCE.allowRightClickWhileFlying;
 
 		EntityRenderers.register(FlyingChests.FLYING_CHEST_ENTITY_TYPE, FlyingChestEntityRenderer::new);
 		EntityRenderers.register(FlyingChests.WILD_FLYING_CHEST_ENTITY_TYPE, FlyingChestEntityRenderer::new);

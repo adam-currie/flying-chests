@@ -6,12 +6,12 @@ import me.fzzyhmstrs.fzzy_config.config.Config;
 
 import net.minecraft.resources.Identifier;
 
-public class FlyingChestConfig extends Config {
+public class FlyingChestServerConfig extends Config {
 
-    public static final FlyingChestConfig INSTANCE =
-        ConfigApiJava.registerAndLoadConfig(FlyingChestConfig::new, RegisterType.SERVER);
+    public static final FlyingChestServerConfig INSTANCE =
+        ConfigApiJava.registerAndLoadConfig(FlyingChestServerConfig::new, RegisterType.SERVER);
 
-    public FlyingChestConfig() {
+    public FlyingChestServerConfig() {
         super(Identifier.fromNamespaceAndPath("flying-chests", "config"));
     }
 

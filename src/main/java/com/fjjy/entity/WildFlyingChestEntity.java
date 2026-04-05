@@ -4,9 +4,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.fjjy.config.FlyingChestConfig;
-
-import org.jetbrains.annotations.Nullable;
+import com.fjjy.config.FlyingChestServerConfig;
 
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -27,10 +25,7 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
     private static final EntityDataAccessor<Byte> BREAK_PROGRESS =
         SynchedEntityData.defineId(WildFlyingChestEntity.class, EntityDataSerializers.BYTE);
 
-    /** Ticks of continuous hold-to-break needed to complete (survival). ~1.5 seconds at 20 tps. */
     public static final int TICKS_TO_BREAK = 30;
-
-
 
     // Server-side tracking — not saved, not synced
     // active: players currently holding attack on this entity this tick
@@ -109,7 +104,7 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
             Map.Entry<ServerPlayer, Integer> entry = it.next();
             ServerPlayer player = entry.getKey();
             // Remove if disconnected or out of range
-            double serverRange = FlyingChestConfig.INSTANCE.wildChestAttackRange + 2.0;
+            double serverRange = FlyingChestServerConfig.INSTANCE.wildChestAttackRange + 2.0;
             if (player.isRemoved() || !player.isAlive()
                     || this.distanceToSqr(player) > serverRange * serverRange) {
                 it.remove();

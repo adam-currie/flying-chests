@@ -5,7 +5,7 @@ import java.util.function.Consumer;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
-import com.fjjy.config.FlyingChestTextureConfig;
+import com.fjjy.config.FlyingChestClientConfig;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.mojang.serialization.MapCodec;
@@ -46,7 +46,7 @@ public class FlyingChestItemRenderer implements SpecialModelRenderer<FlyingChest
 		float tickTime = mc.level != null ? mc.level.getGameTime() + mc.getDeltaTracker().getGameTimeDeltaPartialTick(true) : 0f;
 
 		// Chest/Body
-		var chestTex = FlyingChestTextureConfig.resolveChestTexture();
+		var chestTex = FlyingChestClientConfig.resolveChestTexture();
 		var chestRenderType = RenderTypes.entitySolid(chestTex);
 		poseStack.pushPose();
 		poseStack.translate(0.5, 0.5, 0.5);
@@ -60,16 +60,16 @@ public class FlyingChestItemRenderer implements SpecialModelRenderer<FlyingChest
 		poseStack.popPose();
 
 		// Wings
-		int wIdx = FlyingChestTextureConfig.INSTANCE.wingsVariant.ordinal();
+		int wIdx = FlyingChestClientConfig.INSTANCE.wingsVariant.ordinal();
 		poseStack.pushPose();
 		poseStack.translate(0.5, -0.42, 0.5);
         poseStack.scale(1.66F, 1.66F, 1.66F);
 		if (inHand) {
 			wingRenderers[wIdx].render(poseStack, collector, lightCoords,
-					tickTime, FlyingChestTextureConfig.resolveWingsTexture());
+					tickTime, FlyingChestClientConfig.resolveWingsTexture());
 		} else {
 			wingRenderers[wIdx].renderResting(poseStack, collector, lightCoords,
-					FlyingChestTextureConfig.resolveWingsTexture());
+					FlyingChestClientConfig.resolveWingsTexture());
 		}
 		poseStack.popPose();
 	}
@@ -82,14 +82,14 @@ public class FlyingChestItemRenderer implements SpecialModelRenderer<FlyingChest
 
 	@Override
 	public ConfigSnapshot extractArgument(ItemStack stack) {
-		FlyingChestTextureConfig cfg = FlyingChestTextureConfig.INSTANCE;
+		FlyingChestClientConfig cfg = FlyingChestClientConfig.INSTANCE;
 		return new ConfigSnapshot(cfg.chestVariant, cfg.chestUseResourcePack, cfg.wingsVariant, cfg.wingsUseResourcePack);
 	}
 
 	public record ConfigSnapshot(
-		FlyingChestTextureConfig.ChestVariant chestVariant,
+		FlyingChestClientConfig.ChestVariant chestVariant,
 		boolean chestUseResourcePack,
-		FlyingChestTextureConfig.WingVariant wingsVariant,
+		FlyingChestClientConfig.WingVariant wingsVariant,
 		boolean wingsUseResourcePack
 	) {}
 

@@ -1,6 +1,6 @@
 package com.fjjy.entity;
 
-import com.fjjy.config.FlyingChestConfig;
+import com.fjjy.config.FlyingChestServerConfig;
 import com.fjjy.network.WildChestBreakStatePayload;
 import com.fjjy.network.WildChestBreakStatePayload.State;
 
@@ -63,7 +63,7 @@ public class WildChestBreakHandler {
                 return;
             }
 
-            double maxDistSqr = Math.pow(FlyingChestConfig.INSTANCE.wildChestAttackRange, 2);
+            double maxDistSqr = Math.pow(FlyingChestServerConfig.INSTANCE.wildChestAttackRange, 2);
 
             // find which wild chest (if any) the crosshair is on
             int currentTargetId = -1;
