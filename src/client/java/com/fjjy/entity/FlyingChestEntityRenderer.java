@@ -86,37 +86,39 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
             final float z0 = 0.06f, z1 = 0.94f;
             final int lm = state.lightCoords;
             final int ov = OverlayTexture.NO_OVERLAY;
+            // sampling the breaking texture smaller because the chest texture is only 14x14 instead of the full 16x16
+            final float u0 = 1/16f, u1 = 15/16f, v0 = 1/16f, v1 = 15/16f;
             submitNodeCollector.submitCustomGeometry(poseStack, crumbleType, (pose, buf) -> {
                 // Top (y+)
-                buf.addVertex(pose,x0,y1,z0).setColor(-1).setUv(0,0).setOverlay(ov).setLight(lm).setNormal(pose,0,1,0);
-                buf.addVertex(pose,x0,y1,z1).setColor(-1).setUv(0,1).setOverlay(ov).setLight(lm).setNormal(pose,0,1,0);
-                buf.addVertex(pose,x1,y1,z1).setColor(-1).setUv(1,1).setOverlay(ov).setLight(lm).setNormal(pose,0,1,0);
-                buf.addVertex(pose,x1,y1,z0).setColor(-1).setUv(1,0).setOverlay(ov).setLight(lm).setNormal(pose,0,1,0);
+                buf.addVertex(pose,x0,y1,z0).setColor(-1).setUv(u0,v0).setOverlay(ov).setLight(lm).setNormal(pose,0,1,0);
+                buf.addVertex(pose,x0,y1,z1).setColor(-1).setUv(u0,v1).setOverlay(ov).setLight(lm).setNormal(pose,0,1,0);
+                buf.addVertex(pose,x1,y1,z1).setColor(-1).setUv(u1,v1).setOverlay(ov).setLight(lm).setNormal(pose,0,1,0);
+                buf.addVertex(pose,x1,y1,z0).setColor(-1).setUv(u1,v0).setOverlay(ov).setLight(lm).setNormal(pose,0,1,0);
                 // Bottom (y-)
-                buf.addVertex(pose,x0,y0,z1).setColor(-1).setUv(0,0).setOverlay(ov).setLight(lm).setNormal(pose,0,-1,0);
-                buf.addVertex(pose,x0,y0,z0).setColor(-1).setUv(0,1).setOverlay(ov).setLight(lm).setNormal(pose,0,-1,0);
-                buf.addVertex(pose,x1,y0,z0).setColor(-1).setUv(1,1).setOverlay(ov).setLight(lm).setNormal(pose,0,-1,0);
-                buf.addVertex(pose,x1,y0,z1).setColor(-1).setUv(1,0).setOverlay(ov).setLight(lm).setNormal(pose,0,-1,0);
+                buf.addVertex(pose,x0,y0,z1).setColor(-1).setUv(u0,v0).setOverlay(ov).setLight(lm).setNormal(pose,0,-1,0);
+                buf.addVertex(pose,x0,y0,z0).setColor(-1).setUv(u0,v1).setOverlay(ov).setLight(lm).setNormal(pose,0,-1,0);
+                buf.addVertex(pose,x1,y0,z0).setColor(-1).setUv(u1,v1).setOverlay(ov).setLight(lm).setNormal(pose,0,-1,0);
+                buf.addVertex(pose,x1,y0,z1).setColor(-1).setUv(u1,v0).setOverlay(ov).setLight(lm).setNormal(pose,0,-1,0);
                 // Front (z+)
-                buf.addVertex(pose,x1,y1,z1).setColor(-1).setUv(0,0).setOverlay(ov).setLight(lm).setNormal(pose,0,0,1);
-                buf.addVertex(pose,x0,y1,z1).setColor(-1).setUv(1,0).setOverlay(ov).setLight(lm).setNormal(pose,0,0,1);
-                buf.addVertex(pose,x0,y0,z1).setColor(-1).setUv(1,1).setOverlay(ov).setLight(lm).setNormal(pose,0,0,1);
-                buf.addVertex(pose,x1,y0,z1).setColor(-1).setUv(0,1).setOverlay(ov).setLight(lm).setNormal(pose,0,0,1);
+                buf.addVertex(pose,x1,y1,z1).setColor(-1).setUv(u0,v0).setOverlay(ov).setLight(lm).setNormal(pose,0,0,1);
+                buf.addVertex(pose,x0,y1,z1).setColor(-1).setUv(u1,v0).setOverlay(ov).setLight(lm).setNormal(pose,0,0,1);
+                buf.addVertex(pose,x0,y0,z1).setColor(-1).setUv(u1,v1).setOverlay(ov).setLight(lm).setNormal(pose,0,0,1);
+                buf.addVertex(pose,x1,y0,z1).setColor(-1).setUv(u0,v1).setOverlay(ov).setLight(lm).setNormal(pose,0,0,1);
                 // Back (z-)
-                buf.addVertex(pose,x0,y1,z0).setColor(-1).setUv(0,0).setOverlay(ov).setLight(lm).setNormal(pose,0,0,-1);
-                buf.addVertex(pose,x1,y1,z0).setColor(-1).setUv(1,0).setOverlay(ov).setLight(lm).setNormal(pose,0,0,-1);
-                buf.addVertex(pose,x1,y0,z0).setColor(-1).setUv(1,1).setOverlay(ov).setLight(lm).setNormal(pose,0,0,-1);
-                buf.addVertex(pose,x0,y0,z0).setColor(-1).setUv(0,1).setOverlay(ov).setLight(lm).setNormal(pose,0,0,-1);
+                buf.addVertex(pose,x0,y1,z0).setColor(-1).setUv(u0,v0).setOverlay(ov).setLight(lm).setNormal(pose,0,0,-1);
+                buf.addVertex(pose,x1,y1,z0).setColor(-1).setUv(u1,v0).setOverlay(ov).setLight(lm).setNormal(pose,0,0,-1);
+                buf.addVertex(pose,x1,y0,z0).setColor(-1).setUv(u1,v1).setOverlay(ov).setLight(lm).setNormal(pose,0,0,-1);
+                buf.addVertex(pose,x0,y0,z0).setColor(-1).setUv(u0,v1).setOverlay(ov).setLight(lm).setNormal(pose,0,0,-1);
                 // Right (x+)
-                buf.addVertex(pose,x1,y1,z0).setColor(-1).setUv(0,0).setOverlay(ov).setLight(lm).setNormal(pose,1,0,0);
-                buf.addVertex(pose,x1,y1,z1).setColor(-1).setUv(1,0).setOverlay(ov).setLight(lm).setNormal(pose,1,0,0);
-                buf.addVertex(pose,x1,y0,z1).setColor(-1).setUv(1,1).setOverlay(ov).setLight(lm).setNormal(pose,1,0,0);
-                buf.addVertex(pose,x1,y0,z0).setColor(-1).setUv(0,1).setOverlay(ov).setLight(lm).setNormal(pose,1,0,0);
+                buf.addVertex(pose,x1,y1,z0).setColor(-1).setUv(u0,v0).setOverlay(ov).setLight(lm).setNormal(pose,1,0,0);
+                buf.addVertex(pose,x1,y1,z1).setColor(-1).setUv(u1,v0).setOverlay(ov).setLight(lm).setNormal(pose,1,0,0);
+                buf.addVertex(pose,x1,y0,z1).setColor(-1).setUv(u1,v1).setOverlay(ov).setLight(lm).setNormal(pose,1,0,0);
+                buf.addVertex(pose,x1,y0,z0).setColor(-1).setUv(u0,v1).setOverlay(ov).setLight(lm).setNormal(pose,1,0,0);
                 // Left (x-)
-                buf.addVertex(pose,x0,y1,z1).setColor(-1).setUv(0,0).setOverlay(ov).setLight(lm).setNormal(pose,-1,0,0);
-                buf.addVertex(pose,x0,y1,z0).setColor(-1).setUv(1,0).setOverlay(ov).setLight(lm).setNormal(pose,-1,0,0);
-                buf.addVertex(pose,x0,y0,z0).setColor(-1).setUv(1,1).setOverlay(ov).setLight(lm).setNormal(pose,-1,0,0);
-                buf.addVertex(pose,x0,y0,z1).setColor(-1).setUv(0,1).setOverlay(ov).setLight(lm).setNormal(pose,-1,0,0);
+                buf.addVertex(pose,x0,y1,z1).setColor(-1).setUv(u0,v0).setOverlay(ov).setLight(lm).setNormal(pose,-1,0,0);
+                buf.addVertex(pose,x0,y1,z0).setColor(-1).setUv(u1,v0).setOverlay(ov).setLight(lm).setNormal(pose,-1,0,0);
+                buf.addVertex(pose,x0,y0,z0).setColor(-1).setUv(u1,v1).setOverlay(ov).setLight(lm).setNormal(pose,-1,0,0);
+                buf.addVertex(pose,x0,y0,z1).setColor(-1).setUv(u0,v1).setOverlay(ov).setLight(lm).setNormal(pose,-1,0,0);
             });
         }
         poseStack.popPose();
