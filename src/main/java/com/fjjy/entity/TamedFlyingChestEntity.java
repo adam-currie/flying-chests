@@ -64,6 +64,11 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 		super(entityType, level);
 	}
 
+	@Override
+	public boolean isAttackable() {
+		return false;
+	}
+
 	public void setActiveOwner(@Nullable Player player) {
 		if (this.level().isClientSide()) throw new IllegalStateException("setActiveOwner must only be called on the server");
 		this.activeOwner = player;
@@ -146,7 +151,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 
 	@Override
 	public boolean isPickable() {
-		return this.isDocked() || allowRightClickWhileFlying.getAsBoolean();
+		return !this.isDocked() && allowRightClickWhileFlying.getAsBoolean();
 	}
 
 	public Vec3 getBaseStationPos() {
