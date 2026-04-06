@@ -1,10 +1,13 @@
 package com.fjjy.entity;
 
+import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.fjjy.config.FlyingChestServerConfig;
+
+import java.util.function.Supplier;
 
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -17,10 +20,18 @@ import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomFlyingGoal;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LevelEvent;
 
 public class WildFlyingChestEntity extends FlyingChestEntity {
+
+    private static final Method CLIENT_BREAK_METHOD = ((Supplier<Method>) () -> {
+        // Reflection is used to avoid hard dependency on client-only class, which would cause NoClassDefFoundError on dedicated servers
+        try {
+            return Class.forName("com.fjjy.entity.WildFlyingChestClientEvents")
+                .getMethod("onBreak", WildFlyingChestEntity.class);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }).get();
 
     private static final EntityDataAccessor<Byte> BREAK_PROGRESS =
         SynchedEntityData.defineId(WildFlyingChestEntity.class, EntityDataSerializers.BYTE);
@@ -117,8 +128,13 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
                 Block.popResource(level, this.blockPosition(), stack);
             }
         }
-        level.levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, this.blockPosition(),
-            Block.BLOCK_STATE_REGISTRY.getId(Blocks.CHEST.defaultBlockState()));
         this.discard();
+    }
+
+    @Override
+    public void onClientRemoval() {
+        try {
+            CLIENT_BREAK_METHOD.invoke(null, this);
+        } catch (Throwable ignored) {}
     }
 }

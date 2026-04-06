@@ -7,6 +7,8 @@ import me.fzzyhmstrs.fzzy_config.config.ConfigGroup;
 import me.fzzyhmstrs.fzzy_config.util.EnumTranslatable;
 
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -48,17 +50,19 @@ public class FlyingChestClientConfig extends Config {
     // ---- Variants ----
 
     public enum ChestVariant implements EnumTranslatable {
-        BASIC     ("textures/entity/chest/normal.png"),
-        CHRISTMAS ("textures/entity/chest/christmas.png"),
-        ENDER     ("textures/entity/chest/ender.png"),
-        TRAPPED   ("textures/entity/chest/trapped.png");
+        BASIC     ("textures/entity/chest/normal.png",  Blocks.CHEST),
+        CHRISTMAS ("textures/entity/chest/christmas.png", Blocks.CHEST),
+        ENDER     ("textures/entity/chest/ender.png",   Blocks.ENDER_CHEST),
+        TRAPPED   ("textures/entity/chest/trapped.png", Blocks.TRAPPED_CHEST);
 
         public final Identifier modTexture;
         public final Identifier mcTexture;
+        public final Block particleBlock;
 
-        ChestVariant(String path) {
+        ChestVariant(String path, Block particleBlock) {
             this.modTexture = Identifier.fromNamespaceAndPath("flying-chests", path);
             this.mcTexture  = Identifier.withDefaultNamespace(path);
+            this.particleBlock = particleBlock;
         }
 
         @NotNull
