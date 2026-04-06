@@ -88,8 +88,8 @@ public class FlyingChestBaseBlockEntityRenderer
 
         var renderType = RenderTypes.entitySolid(resolveTexture());
 
-        submitNodeCollector.submitModelPart(platformTop, poseStack, renderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
-        submitNodeCollector.submitModelPart(platformBody, poseStack, renderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
+        submitNodeCollector.submitModelPart(platformTop, poseStack, renderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null, -1, state.breakProgress);
+        submitNodeCollector.submitModelPart(platformBody, poseStack, renderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null, -1, state.breakProgress);
 
         // 4 corners: 2 straight, 2 rotated 90° Y
         float[][] corners = {{-7f/16, 0, 7f/16}, {7f/16, 0, 7f/16}, {7f/16, 0, -7f/16}, {-7f/16, 0, -7f/16}};
@@ -97,7 +97,7 @@ public class FlyingChestBaseBlockEntityRenderer
             poseStack.pushPose();
             poseStack.translate(corners[i][0], corners[i][1], corners[i][2]);
             if (i % 2 == 0) poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(90));
-            submitNodeCollector.submitModelPart(leg, poseStack, renderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
+            submitNodeCollector.submitModelPart(leg, poseStack, renderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null, -1, state.breakProgress);
             poseStack.popPose();
         }
 

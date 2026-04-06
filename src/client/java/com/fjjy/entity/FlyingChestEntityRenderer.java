@@ -4,6 +4,7 @@ import com.fjjy.config.FlyingChestClientConfig;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -14,8 +15,12 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.ModelBakery;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
+import net.minecraft.server.level.BlockDestructionProgress;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import java.util.SortedSet;
 
 public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity, FlyingChestEntityRenderer.FlyingChestRenderState> {
 
@@ -25,6 +30,8 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
 
     // Wing renderers indexed by WingVariant.ordinal(): [0]=BEE, [1]=ALLAY, [2]=BAT
     private final WingRenderer[] wingRenderers;
+
+    private Long2ObjectMap<SortedSet<BlockDestructionProgress>> destructionProgress;
 
     public FlyingChestEntityRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -40,6 +47,8 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
             new AllayWingRenderer(context),
             new BatWingRenderer(context)
         };
+
+        this.destructionProgress = ((com.fjjy.mixin.client.LevelRendererAccessor) Minecraft.getInstance().levelRenderer).getDestructionProgress();
     }
 
     @Override
@@ -54,7 +63,21 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         state.yRot = entity.isDocked() ? baseDirection.toYRot() : Mth.rotLerp(partialTick, entity.yHeadRotO, entity.getYHeadRot());
         state.lidAngle = Mth.lerp(partialTick, entity.lidAngleO, entity.lidAngle);
         state.wingTickTime = entity.tickCount + partialTick;
-        state.breakStage = entity instanceof WildFlyingChestEntity wild ? wild.getBreakProgress() : 0;
+        if (entity instanceof WildFlyingChestEntity wild) {
+            state.breakStage = wild.getBreakProgress();
+        } else if (entity instanceof TamedFlyingChestEntity tamed) {
+            state.breakStage = getDockedBreakStage(tamed);
+        } else {
+            throw new IllegalStateException("unknown entity type, if this happens we probably need more than one renderer...: " + entity.getClass());
+        }
+    }
+
+    private byte getDockedBreakStage(TamedFlyingChestEntity tamed) {
+        if (!tamed.isDocked()) return 0;
+        var set = destructionProgress.get(BlockPos.containing(tamed.getBaseStationPos()).asLong());
+        return (set == null || set.isEmpty())
+            ?  0
+            : (byte) (set.last().getProgress() + 1);
     }
 
     @Override

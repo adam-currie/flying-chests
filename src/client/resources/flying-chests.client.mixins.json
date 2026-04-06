@@ -3,6 +3,7 @@
 	"package": "com.fjjy.mixin.client",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
+		"LevelRendererAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1
