@@ -176,8 +176,7 @@ public class FlyingChests implements ModInitializer {
 				var entity = ((ServerLevel) player.level()).getEntity(payload.entityId());
 				if (!(entity instanceof WildFlyingChestEntity chest)) return;
 				switch (payload.state()) {
-					case START -> chest.onBreakStartOrResume(player);
-					case PAUSE -> chest.onBreakPause(player);
+					case START -> chest.onBreakStart(player);
 					case STOP  -> chest.onBreakStop(player);
 				}
 			});

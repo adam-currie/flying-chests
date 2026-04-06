@@ -28,10 +28,7 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
     public static final int TICKS_TO_BREAK = 30;
 
     // Server-side tracking — not saved, not synced
-    // active: players currently holding attack on this entity this tick
-    // paused: players who looked away but haven't released attack
     private final Map<ServerPlayer, Integer> activeBreakers = new LinkedHashMap<>();
-    private final Map<ServerPlayer, Integer> pausedBreakers = new LinkedHashMap<>();
 
     public WildFlyingChestEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -58,27 +55,18 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
         this.goalSelector.addGoal(0, new WaterAvoidingRandomFlyingGoal(this, 1.0));
     }
 
-    public void onBreakStartOrResume(ServerPlayer player) {
+    public void onBreakStart(ServerPlayer player) {
         if (this.level().isClientSide()) return;
         if (player.getAbilities().instabuild) {
             performBreak((ServerLevel) this.level());
             return;
         }
-        // Move from paused → active (resuming), or add fresh with 0 ticks
-        Integer paused = pausedBreakers.remove(player);
-        activeBreakers.put(player, paused != null ? paused : 0);
-    }
-
-    public void onBreakPause(ServerPlayer player) {
-        if (this.level().isClientSide()) return;
-        Integer ticks = activeBreakers.remove(player);
-        if (ticks != null) pausedBreakers.put(player, ticks);
+        activeBreakers.put(player, 0);
     }
 
     public void onBreakStop(ServerPlayer player) {
         if (this.level().isClientSide()) return;
         activeBreakers.remove(player);
-        pausedBreakers.remove(player);
         syncBreakStage();
     }
 
@@ -87,14 +75,7 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
         super.tick();
         if (this.level().isClientSide()) return;
 
-        // Clean up disconnected paused breakers — they'll never resume
-        boolean pausedChanged = pausedBreakers.entrySet().removeIf(
-            e -> e.getKey().isRemoved() || !e.getKey().isAlive());
-
-        if (activeBreakers.isEmpty()) {
-            if (pausedChanged) syncBreakStage();
-            return;
-        }
+        if (activeBreakers.isEmpty()) return;
 
         ServerLevel serverLevel = (ServerLevel) this.level();
         int maxTicks = 0;
@@ -108,7 +89,6 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
             if (player.isRemoved() || !player.isAlive()
                     || this.distanceToSqr(player) > serverRange * serverRange) {
                 it.remove();
-                pausedBreakers.remove(player);
                 continue;
             }
             int ticks = entry.getValue() + 1;
@@ -126,7 +106,6 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
     private void syncBreakStage() {
         int maxTicks = 0;
         for (int t : activeBreakers.values()) if (t > maxTicks) maxTicks = t;
-        for (int t : pausedBreakers.values()) if (t > maxTicks) maxTicks = t;
         byte stage = maxTicks == 0 ? 0 : (byte) Math.min(10, (int) ((float) maxTicks / TICKS_TO_BREAK * 10) + 1);
         this.entityData.set(BREAK_PROGRESS, stage);
     }

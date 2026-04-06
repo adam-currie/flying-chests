@@ -8,7 +8,7 @@ import net.minecraft.resources.Identifier;
 
 public record WildChestBreakStatePayload(int entityId, State state) implements CustomPacketPayload {
 
-	public enum State { START, PAUSE, STOP }
+	public enum State { START, STOP }
 
 	public static final Type<WildChestBreakStatePayload> TYPE =
 		new Type<>(Identifier.fromNamespaceAndPath("flying-chests", "wild_chest_break_state"));
