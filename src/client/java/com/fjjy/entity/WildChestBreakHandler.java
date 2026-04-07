@@ -63,11 +63,12 @@ public class WildChestBreakHandler {
                     var rand = client.level.getRandom();
                     var blockState = FlyingChestClientConfig.INSTANCE.chestVariant.particleBlock.defaultBlockState();
                     Function<Double, Double> spread = n -> n + (rand.nextDouble() - 0.5) * .3;
-                    
+                    var dm = wildChest.getDeltaMovement();
+
                     client.particleEngine.add(
                         new TerrainParticle(client.level,
                             spread.apply(hit.x), spread.apply(hit.y), spread.apply(hit.z),
-                            0.5, 0.5, 0.5,
+                            dm.x, dm.y, dm.z,
                             blockState)
                         .setPower(0.2F).scale(0.5F));
                 }
