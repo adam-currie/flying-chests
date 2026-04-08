@@ -8,12 +8,10 @@ flying entity:
 
 -red alert/anger mark over icon for wild version of the chest or maybe exclamation point
 
--rename config to remove the word texture from it, name the 2 configs client and server
-
--when wild chest is broken the particles come from too low
-
 -server side validity checks for entity breaking
     -probably good to just do a distance check for:
         -start packet received
         -would be break completion
         -once a second while paused
+
+-support for locking chest plugins
