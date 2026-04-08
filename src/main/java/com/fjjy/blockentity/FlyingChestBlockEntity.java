@@ -3,6 +3,8 @@ package com.fjjy.blockentity;
 import java.util.UUID;
 
 import com.fjjy.FlyingChests;
+import com.fjjy.entity.TamedFlyingChestEntity;
+
 import com.mojang.serialization.Codec;
 
 import net.minecraft.core.BlockPos;
@@ -49,8 +51,9 @@ public class FlyingChestBlockEntity extends BlockEntity {
 	public void setRemoved() {
 		if (this.level instanceof ServerLevel serverLevel && this.linkedEntityUuid != null) {
 			Entity linked = serverLevel.getEntity(this.linkedEntityUuid);
-			if (linked != null) {
-				linked.discard();
+			if (linked != null && linked instanceof TamedFlyingChestEntity flyingChest) {
+				flyingChest.snapToBase();
+				flyingChest.performBreak(serverLevel);
 			}
 		}
 		super.setRemoved();

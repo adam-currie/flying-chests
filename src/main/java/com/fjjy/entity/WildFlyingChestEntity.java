@@ -126,16 +126,6 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
         this.entityData.set(BREAK_PROGRESS, stage);
     }
 
-    void performBreak(ServerLevel level) {
-        for (int i = 0; i < this.getInventory().getContainerSize(); i++) {
-            ItemStack stack = this.getInventory().getItem(i);
-            if (!stack.isEmpty()) {
-                Block.popResource(level, this.blockPosition(), stack);
-            }
-        }
-        this.discard();
-    }
-
     @Override
     public void onClientRemoval() {
         try {

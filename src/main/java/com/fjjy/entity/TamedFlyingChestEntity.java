@@ -220,6 +220,12 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 		return entity;
 	}
 
+	public void snapToBase() {
+		this.setPos(this.getBaseStationPos());
+		this.setDeltaMovement(Vec3.ZERO);
+		this.setDocked(true);
+	}
+
 	private static final class FollowOwnerGoal extends Goal {
 		private final TamedFlyingChestEntity mob;
 		private int ticksRemaining;
@@ -373,10 +379,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 		public void tick() {
 			// Snap to base station position when docking finishes
 			if (!this.mob.getNavigation().isInProgress()) {
-				Vec3 bsp = this.mob.getBaseStationPos();
-				if (bsp != null) this.mob.setPos(bsp);
-				this.mob.setDeltaMovement(Vec3.ZERO);
-				this.mob.setDocked(true);
+				this.mob.snapToBase();
 			}
 		}
 

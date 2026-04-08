@@ -25,12 +25,14 @@ import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.block.Block;
 
 public abstract class FlyingChestEntity extends PathfinderMob {
 
@@ -76,6 +78,17 @@ public abstract class FlyingChestEntity extends PathfinderMob {
 	public Direction getBaseDirection() {
 		return Direction.NORTH;
 	}
+
+	public void performBreak(ServerLevel level) {
+        Block.popResource(level, this.blockPosition(), new ItemStack(com.fjjy.FlyingChests.FLYING_CHEST));
+        for (int i = 0; i < this.getInventory().getContainerSize(); i++) {
+            ItemStack stack = this.getInventory().getItem(i);
+            if (!stack.isEmpty()) {
+                Block.popResource(level, this.blockPosition(), stack);
+            }
+        }
+        this.discard();
+    }
 
 	@Override
 	protected PathNavigation createNavigation(Level level) {
