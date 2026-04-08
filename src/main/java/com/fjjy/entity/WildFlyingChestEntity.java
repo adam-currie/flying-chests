@@ -4,10 +4,9 @@ import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import com.fjjy.config.FlyingChestServerConfig;
-
-import java.util.function.Supplier;
 
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -25,9 +24,15 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
 
     private static final Method CLIENT_BREAK_METHOD = ((Supplier<Method>) () -> {
         // Reflection is used to avoid hard dependency on client-only class, which would cause NoClassDefFoundError on dedicated servers
+        final String methodName = "breakEffect";
+        final String className = "com.fjjy.entity.FlyingChestEffects";
         try {
-            return Class.forName("com.fjjy.entity.WildFlyingChestClientEvents")
-                .getMethod("onBreak", WildFlyingChestEntity.class);
+            return Class.forName(className)
+                .getMethod(methodName, FlyingChestEntity.class);
+        } catch (ClassNotFoundException | NoSuchMethodException e) {
+            com.fjjy.FlyingChests.LOGGER
+                .error("[flying-chests] {}.{} not found — client break effect will be skipped. stale method name?", className, methodName, e);
+            return null;
         } catch (Throwable ignored) {
             return null;
         }
