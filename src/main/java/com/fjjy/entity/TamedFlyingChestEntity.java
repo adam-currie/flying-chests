@@ -28,11 +28,14 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 public class TamedFlyingChestEntity extends FlyingChestEntity {
@@ -59,6 +62,10 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 	// Set by client init code to avoid client-only imports in the main module
 	public static Consumer<TamedFlyingChestEntity> onActiveStateChanged = null;
 	public static BooleanSupplier allowRightClickWhileFlying = () -> false;
+
+	private boolean	activeOwnerHasLosToBaseCache = false;
+	private int		activeOwnerHasLosToBaseCacheTick = 0;
+	private int		activeOwnerHasLosToBaseInterval = 10;
 
 	public TamedFlyingChestEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
 		super(entityType, level);
@@ -163,13 +170,6 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 		this.entityData.set(BASE_STATION_POS, new Vector3f((float)pos.x, (float)pos.y, (float)pos.z));
 	}
 
-	/**
-	 * follow range = in operating range but further than auto docking range
-	 */
-	private boolean isActiveOwnerInFollowRange() {
-		return activeOwner != null && activeOwner.distanceToSqr(this.getBaseStationPos()) > 20.0D;
-	}
-
 	@Override
 	protected void doPush(Entity entity) {
 		if (isDocked() || !(entity instanceof Player)) {
@@ -226,6 +226,53 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 		this.setDocked(true);
 	}
 
+	private boolean activeOwnerHasLosToBase() {
+		var basePos = BlockPos.containing(getBaseStationPos());
+
+		Vec3 center = Vec3.atCenterOf(basePos);
+		Vec3 eye = activeOwner.getEyePosition();
+
+		// 3 faces of a half-cube (radius 0.25) pointing toward the player,
+		// each subdivided into a 2×2 grid — 19 unique nodes, no duplicates.
+		final double h = 0.25;
+		double sx = eye.x >= center.x ? h : -h;
+		double sy = eye.y >= center.y ? h : -h;
+		double sz = eye.z >= center.z ? h : -h;
+		double[] o = { -h, 0.0, h };
+
+		Vec3[] targets = new Vec3[19];
+		int i = 0;
+		// X face — 9 points
+		for (double dy : o) for (double dz : o)
+			targets[i++] = new Vec3(center.x + sx, center.y + dy, center.z + dz);
+		// Y face — 6 unique (skip dx==sx, already on X face)
+		for (double dx : o) if (dx != sx) for (double dz : o)
+			targets[i++] = new Vec3(center.x + dx, center.y + sy, center.z + dz);
+		// Z face — 4 unique (skip dx==sx or dy==sy, already covered)
+		for (double dx : o) if (dx != sx) for (double dy : o) if (dy != sy)
+			targets[i++] = new Vec3(center.x + dx, center.y + dy, center.z + sz);
+
+		for (Vec3 target : targets) {
+			ClipContext ctx = new ClipContext(eye, target, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, activeOwner);
+			HitResult hit = this.level().clip(ctx);
+			// Targets are inside the block — hitting basePos means the ray reached it unobstructed
+			if (hit.getType() == HitResult.Type.MISS
+					|| (hit instanceof BlockHitResult bhr && bhr.getBlockPos().equals(basePos))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean activeOwnerHasLosToBaseCached() {
+		if (activeOwner == null) return false;
+		if (this.level().getGameTime() >= activeOwnerHasLosToBaseCacheTick + activeOwnerHasLosToBaseInterval) {
+			activeOwnerHasLosToBaseCache = activeOwnerHasLosToBase();
+			activeOwnerHasLosToBaseCacheTick = (int) this.level().getGameTime();
+		}
+		return activeOwnerHasLosToBaseCache;
+	}
+
 	private static final class FollowOwnerGoal extends Goal {
 		private final TamedFlyingChestEntity mob;
 		private int ticksRemaining;
@@ -241,12 +288,9 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 
 		@Override
 		public boolean canUse() {
-			return this.mob.isActiveOwnerInFollowRange();
-		}
-
-		@Override
-		public boolean canContinueToUse() {
-			return this.mob.isActiveOwnerInFollowRange();
+			return this.mob.activeOwnerHasLosToBaseCached()
+				? this.mob.activeOwner.distanceToSqr(this.mob.getBaseStationPos()) > 20.0D
+				: this.mob.activeOwner != null; // if we don't have LOS but the owner is still in range, 
 		}
 
 		@Override
@@ -262,16 +306,14 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 
 		@Override
 		public void tick() {
-			if (this.mob.isActiveOwnerInFollowRange()) {
-				if (--this.ticksRemaining <= 0) {
-					this.ticksRemaining = calculateTicksRemaining();
-					updateDirection();
-					// chance to look at owner (instead of the target)
-					this.lookAtOwner = this.rng.nextInt(3) == 0; // 1 in 3
-				}
-				if (this.lookAtOwner) {
-					this.mob.getLookControl().setLookAt(this.mob.activeOwner, 45.0F, 90.0F);
-				}
+			if (--this.ticksRemaining <= 0) {
+				this.ticksRemaining = calculateTicksRemaining();
+				updateDirection();
+				// chance to look at owner (instead of the target)
+				this.lookAtOwner = this.rng.nextInt(3) == 0; // 1 in 3
+			}
+			if (this.lookAtOwner) {
+				this.mob.getLookControl().setLookAt(this.mob.activeOwner, 45.0F, 90.0F);
 			}
 		}
 
@@ -367,12 +409,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 
 		@Override
 		public boolean canUse() {
-			return !this.mob.isDocked();
-		}
-
-		@Override
-		public boolean canContinueToUse() {
-			return !this.mob.isDocked();
+			return !this.mob.isDocked() && this.mob.activeOwnerHasLosToBaseCached();
 		}
 
 		@Override
