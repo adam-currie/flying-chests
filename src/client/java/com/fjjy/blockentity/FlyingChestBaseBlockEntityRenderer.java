@@ -44,9 +44,9 @@ public class FlyingChestBaseBlockEntityRenderer
 
     public FlyingChestBaseBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
         ModelPart root = context.bakeLayer(LAYER);
-        this.leg = root.getChild("leg");
-        this.platformTop = root.getChild("platform_top");
-        this.platformBody = root.getChild("platform_body");
+        leg = root.getChild("leg");
+        platformTop = root.getChild("platform_top");
+        platformBody = root.getChild("platform_body");
     }
 
     public static LayerDefinition createLayer() {

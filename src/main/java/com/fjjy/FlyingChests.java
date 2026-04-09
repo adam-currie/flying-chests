@@ -190,7 +190,7 @@ public class FlyingChests implements ModInitializer {
 	private int tickCounter = 0;
 
 	private void onServerTick(MinecraftServer server) {
-		if (++this.tickCounter % 10 != 0) return;
+		if (++tickCounter % 10 != 0) return;
 		for (ServerLevel level : server.getAllLevels()) {
 			List<? extends TamedFlyingChestEntity> chests = level.getEntities(FLYING_CHEST_ENTITY_TYPE, e -> true);
 			if (chests.isEmpty()) continue;

@@ -53,8 +53,8 @@ public abstract class FlyingChestEntity extends PathfinderMob {
 
 	public FlyingChestEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
 		super(entityType, level);
-		this.moveControl = new FlyingMoveControl(this, 20, true);
-		this.openingManager = new FlyingChestOpeningManager(this, open -> this.entityData.set(IS_OPEN, open));
+		moveControl = new FlyingMoveControl(this, 20, true);
+		openingManager = new FlyingChestOpeningManager(this, open -> entityData.set(IS_OPEN, open));
 	}
 
 	@Override
@@ -80,14 +80,14 @@ public abstract class FlyingChestEntity extends PathfinderMob {
 	}
 
 	public void performBreak(ServerLevel level) {
-        Block.popResource(level, this.blockPosition(), new ItemStack(com.fjjy.FlyingChests.FLYING_CHEST));
-        for (int i = 0; i < this.getInventory().getContainerSize(); i++) {
-            ItemStack stack = this.getInventory().getItem(i);
+        Block.popResource(level, blockPosition(), new ItemStack(com.fjjy.FlyingChests.FLYING_CHEST));
+        for (int i = 0; i < getInventory().getContainerSize(); i++) {
+            ItemStack stack = getInventory().getItem(i);
             if (!stack.isEmpty()) {
-                Block.popResource(level, this.blockPosition(), stack);
+                Block.popResource(level, blockPosition(), stack);
             }
         }
-        this.discard();
+        discard();
     }
 
 	@Override
@@ -102,12 +102,12 @@ public abstract class FlyingChestEntity extends PathfinderMob {
 	@Override
 	public void tick() {
 		super.tick();
-		if (this.level().isClientSide()) {
-			this.lidAngleO = this.lidAngle;
-			if (this.entityData.get(IS_OPEN)) {
-				this.lidAngle = Math.min(1.0F, this.lidAngle + 0.1F);
+		if (level().isClientSide()) {
+			lidAngleO = lidAngle;
+			if (entityData.get(IS_OPEN)) {
+				lidAngle = Math.min(1.0F, lidAngle + 0.1F);
 			} else {
-				this.lidAngle = Math.max(0.0F, this.lidAngle - 0.1F);
+				lidAngle = Math.max(0.0F, lidAngle - 0.1F);
 			}
 		}
 	}
@@ -130,7 +130,7 @@ public abstract class FlyingChestEntity extends PathfinderMob {
 
 	@Override
 	public void travel(Vec3 input) {
-		this.travelFlying(input, this.getSpeed());
+		travelFlying(input, getSpeed());
 	}
 
 	@Override
@@ -180,13 +180,13 @@ public abstract class FlyingChestEntity extends PathfinderMob {
 	protected void addAdditionalSaveData(ValueOutput output) {
 		super.addAdditionalSaveData(output);
 		output.store("Items", ItemContainerContents.CODEC,
-			ItemContainerContents.fromItems(this.inventory.getItems()));
+			ItemContainerContents.fromItems(inventory.getItems()));
 	}
 
 	@Override
 	protected void readAdditionalSaveData(ValueInput input) {
 		super.readAdditionalSaveData(input);
 		input.read("Items", ItemContainerContents.CODEC)
-			.ifPresent(contents -> contents.copyInto(this.inventory.getItems()));
+			.ifPresent(contents -> contents.copyInto(inventory.getItems()));
 	}
 }

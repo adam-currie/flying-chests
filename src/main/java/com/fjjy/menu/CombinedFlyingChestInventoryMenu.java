@@ -59,18 +59,18 @@ public class CombinedFlyingChestInventoryMenu extends AbstractCraftingMenu {
     public CombinedFlyingChestInventoryMenu(int containerId, Inventory playerInventory, Container chestInventory) {
         super(FlyingChests.COMBINED_CHEST_MENU_TYPE, containerId, 2, 2);
         checkContainerSize(chestInventory, CHEST_SLOTS);
-        this.level  = playerInventory.player.level();
-        this.player = playerInventory.player;
+        level  = playerInventory.player.level();
+        player = playerInventory.player;
 
         // Slot 0: crafting result
-        this.craftingResultSlot = this.addResultSlot(player, RESULT_X, RESULT_Y);
+        craftingResultSlot = addResultSlot(player, RESULT_X, RESULT_Y);
         // Slots 1-4: 2x2 crafting inputs
-        this.addCraftingGridSlots(CRAFTING_X, CRAFTING_Y);
+        addCraftingGridSlots(CRAFTING_X, CRAFTING_Y);
 
         // Slots 5-58: chest (6 rows x 9)
         for (int row = 0; row < 6; row++) {
             for (int col = 0; col < 9; col++) {
-                this.addSlot(new Slot(chestInventory, col + row * 9,
+                addSlot(new Slot(chestInventory, col + row * 9,
                     8 + col * 18, 18 + row * 18));
             }
         }
@@ -84,53 +84,53 @@ public class CombinedFlyingChestInventoryMenu extends AbstractCraftingMenu {
         };
         for (int k = 0; k < 4; k++) {
             final Identifier icon = armorIcons[k];
-            this.addSlot(new Slot(playerInventory, 39 - k,
+            addSlot(new Slot(playerInventory, 39 - k,
                     8, 8 + k * 18 + INVENTORY_OFFSET_Y) {
                 @Override public Identifier getNoItemIcon() { return icon; }
             });
         }
 
         // Slot 63: offhand (inventory slot 40) with shield hint icon
-        this.addSlot(new Slot(playerInventory, 40, 77, 62 + INVENTORY_OFFSET_Y) {
+        addSlot(new Slot(playerInventory, 40, 77, 62 + INVENTORY_OFFSET_Y) {
             @Override public Identifier getNoItemIcon() { return InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD; }
         });
 
         // Slots 64-90: player storage (3 rows x 9), inventory.png y=84+row*18 + offset
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                this.addSlot(new Slot(playerInventory, col + row * 9 + 9,
+                addSlot(new Slot(playerInventory, col + row * 9 + 9,
                     8 + col * 18, 84 + row * 18 + INVENTORY_OFFSET_Y));
             }
         }
 
         // Slots 91-99: hotbar, inventory.png y=142 + offset
         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(playerInventory, col,
+            addSlot(new Slot(playerInventory, col,
                 8 + col * 18, 142 + INVENTORY_OFFSET_Y));
         }
 
-        this.slotsChanged(this.craftSlots);
+        slotsChanged(craftSlots);
     }
 
     // -------------------------------------------------------------------------
 
     @Override
-    public Slot getResultSlot() { return this.craftingResultSlot; }
+    public Slot getResultSlot() { return craftingResultSlot; }
 
     @Override
     public List<Slot> getInputGridSlots() {
-        return this.slots.subList(1, 5);
+        return slots.subList(1, 5);
     }
 
     @Override
-    protected Player owner() { return this.player; }
+    protected Player owner() { return player; }
 
     @Override
     public RecipeBookType getRecipeBookType() { return RecipeBookType.CRAFTING; }
 
     @Override
     public void fillCraftSlotsStackedContents(StackedItemContents contents) {
-        this.craftSlots.fillStackedContents(contents);
+        craftSlots.fillStackedContents(contents);
     }
 
     @Override
@@ -143,26 +143,26 @@ public class CombinedFlyingChestInventoryMenu extends AbstractCraftingMenu {
     @Override
     public void slotsChanged(Container container) {
         super.slotsChanged(container);
-        if (container == this.craftSlots && !this.level.isClientSide()) {
-            ServerLevel serverLevel = (ServerLevel) this.level;
-            CraftingInput input = this.craftSlots.asCraftInput();
+        if (container == craftSlots && !level.isClientSide()) {
+            ServerLevel serverLevel = (ServerLevel) level;
+            CraftingInput input = craftSlots.asCraftInput();
             Optional<RecipeHolder<CraftingRecipe>> optional = serverLevel
                     .getServer().getRecipeManager()
                     .getRecipeFor(RecipeType.CRAFTING, input, serverLevel);
             ItemStack result = optional
                     .map(r -> r.value().assemble(input, serverLevel.registryAccess()))
                     .orElse(ItemStack.EMPTY);
-            this.resultSlots.setRecipeUsed(optional.orElse(null));
-            this.resultSlots.setItem(0, result);
+            resultSlots.setRecipeUsed(optional.orElse(null));
+            resultSlots.setItem(0, result);
         }
     }
 
     @Override
     public void removed(Player player) {
         super.removed(player);
-        if (!this.level.isClientSide()) {
-            for (int i = 0; i < this.craftSlots.getContainerSize(); i++) {
-                ItemStack stack = this.craftSlots.removeItemNoUpdate(i);
+        if (!level.isClientSide()) {
+            for (int i = 0; i < craftSlots.getContainerSize(); i++) {
+                ItemStack stack = craftSlots.removeItemNoUpdate(i);
                 if (!stack.isEmpty()) player.drop(stack, false);
             }
         }
@@ -174,7 +174,7 @@ public class CombinedFlyingChestInventoryMenu extends AbstractCraftingMenu {
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         ItemStack result = ItemStack.EMPTY;
-        Slot slot = this.slots.get(index);
+        Slot slot = slots.get(index);
         if (!slot.hasItem()) return result;
 
         ItemStack stack = slot.getItem();

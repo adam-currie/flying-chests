@@ -23,34 +23,34 @@ public class FlyingChestBlockEntity extends BlockEntity {
 	}
 
 	public UUID getLinkedEntityUuid() {
-		return this.linkedEntityUuid;
+		return linkedEntityUuid;
 	}
 
 	public void setLinkedEntityUuid(UUID uuid) {
-		this.linkedEntityUuid = uuid;
-		this.setChanged();
+		linkedEntityUuid = uuid;
+		setChanged();
 	}
 
 	@Override
 	protected void saveAdditional(ValueOutput output) {
 		super.saveAdditional(output);
-		if (this.linkedEntityUuid != null) {
-			output.store("LinkedEntityUuid", Codec.STRING, this.linkedEntityUuid.toString());
+		if (linkedEntityUuid != null) {
+			output.store("LinkedEntityUuid", Codec.STRING, linkedEntityUuid.toString());
 		}
 	}
 
 	@Override
 	protected void loadAdditional(ValueInput input) {
 		super.loadAdditional(input);
-		this.linkedEntityUuid = input.read("LinkedEntityUuid", Codec.STRING)
+		linkedEntityUuid = input.read("LinkedEntityUuid", Codec.STRING)
 			.map(UUID::fromString)
 			.orElse(null);
 	}
 
 	@Override
 	public void setRemoved() {
-		if (this.level instanceof ServerLevel serverLevel && this.linkedEntityUuid != null) {
-			Entity linked = serverLevel.getEntity(this.linkedEntityUuid);
+		if (level instanceof ServerLevel serverLevel && linkedEntityUuid != null) {
+			Entity linked = serverLevel.getEntity(linkedEntityUuid);
 			if (linked != null && linked instanceof TamedFlyingChestEntity flyingChest) {
 				flyingChest.snapToBase();
 				flyingChest.performBreak(serverLevel);

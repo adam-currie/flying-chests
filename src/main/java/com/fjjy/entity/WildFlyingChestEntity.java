@@ -58,7 +58,7 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
 
     /** Break stage 0 = not breaking, 1-10 = crack stages. Synced to all clients for crumble overlay. */
     public byte getBreakProgress() {
-        return this.entityData.get(BREAK_PROGRESS);
+        return entityData.get(BREAK_PROGRESS);
     }
 
     @Override
@@ -68,20 +68,20 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
 
     @Override
     protected void registerGoals() {
-        this.goalSelector.addGoal(0, new WaterAvoidingRandomFlyingGoal(this, 1.0));
+        goalSelector.addGoal(0, new WaterAvoidingRandomFlyingGoal(this, 1.0));
     }
 
     public void onBreakStart(ServerPlayer player) {
-        if (this.level().isClientSide()) return;
+        if (level().isClientSide()) return;
         if (player.getAbilities().instabuild) {
-            performBreak((ServerLevel) this.level());
+            performBreak((ServerLevel) level());
             return;
         }
         activeBreakers.put(player, 0);
     }
 
     public void onBreakStop(ServerPlayer player) {
-        if (this.level().isClientSide()) return;
+        if (level().isClientSide()) return;
         activeBreakers.remove(player);
         syncBreakStage();
     }
@@ -89,11 +89,11 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
     @Override
     public void tick() {
         super.tick();
-        if (this.level().isClientSide()) return;
+        if (level().isClientSide()) return;
 
         if (activeBreakers.isEmpty()) return;
 
-        ServerLevel serverLevel = (ServerLevel) this.level();
+        ServerLevel serverLevel = (ServerLevel) level();
         int maxTicks = 0;
 
         Iterator<Map.Entry<ServerPlayer, Integer>> it = activeBreakers.entrySet().iterator();
@@ -103,7 +103,7 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
             // Remove if disconnected or out of range
             double serverRange = FlyingChestServerConfig.INSTANCE.wildChestAttackRange + 2.0;
             if (player.isRemoved() || !player.isAlive()
-                    || this.distanceToSqr(player) > serverRange * serverRange) {
+                    || distanceToSqr(player) > serverRange * serverRange) {
                 it.remove();
                 continue;
             }
@@ -123,7 +123,7 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
         int maxTicks = 0;
         for (int t : activeBreakers.values()) if (t > maxTicks) maxTicks = t;
         byte stage = maxTicks == 0 ? 0 : (byte) Math.min(10, (int) ((float) maxTicks / TICKS_TO_BREAK * 10) + 1);
-        this.entityData.set(BREAK_PROGRESS, stage);
+        entityData.set(BREAK_PROGRESS, stage);
     }
 
     @Override

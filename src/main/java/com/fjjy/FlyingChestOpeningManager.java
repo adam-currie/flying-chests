@@ -30,9 +30,9 @@ public class FlyingChestOpeningManager {
 
     public FlyingChestOpeningManager(FlyingChestEntity chest, Consumer<Boolean> onOpenStateChanged) {
         this.chest = chest;
-        this.combinedMenuProvider = new CombinedFlyingChestInventoryMenuProvider(chest, this::onMenuClosed);
-        this.regularMenuProvider = new RegularFlyingChestInventoryMenuProvider(chest, this::onMenuClosed);
-        this.openersCounter = new ContainerOpenersCounter() {
+        combinedMenuProvider = new CombinedFlyingChestInventoryMenuProvider(chest, this::onMenuClosed);
+        regularMenuProvider = new RegularFlyingChestInventoryMenuProvider(chest, this::onMenuClosed);
+        openersCounter = new ContainerOpenersCounter() {
             @Override
             protected void onOpen(Level level, BlockPos pos, BlockState blockState) {
                 chest.playSound(SoundEvents.CHEST_OPEN, 0.5F,

@@ -40,7 +40,7 @@ public class FlyingChestBlock extends Block implements EntityBlock {
 
 	public FlyingChestBlock(Properties properties) {
 		super(properties);
-		this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(IS_DOCKED, true));
+		registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(IS_DOCKED, true));
 	}
 
 	@Override
@@ -58,7 +58,7 @@ public class FlyingChestBlock extends Block implements EntityBlock {
 		if (context.getPlayer() == null) {
 			return null;
 		}
-		return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+		return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
 	}
 
 	@Override

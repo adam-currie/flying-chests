@@ -60,8 +60,8 @@ public class FlyingChestClientConfig extends Config {
         public final Block particleBlock;
 
         ChestVariant(String path, Block particleBlock) {
-            this.modTexture = Identifier.fromNamespaceAndPath("flying-chests", path);
-            this.mcTexture  = Identifier.withDefaultNamespace(path);
+            modTexture = Identifier.fromNamespaceAndPath("flying-chests", path);
+            mcTexture  = Identifier.withDefaultNamespace(path);
             this.particleBlock = particleBlock;
         }
 
@@ -81,8 +81,8 @@ public class FlyingChestClientConfig extends Config {
         public final Identifier mcTexture;
 
         WingVariant(String path) {
-            this.modTexture = Identifier.fromNamespaceAndPath("flying-chests", path);
-            this.mcTexture  = Identifier.withDefaultNamespace(path);
+            modTexture = Identifier.fromNamespaceAndPath("flying-chests", path);
+            mcTexture  = Identifier.withDefaultNamespace(path);
         }
 
         @NotNull

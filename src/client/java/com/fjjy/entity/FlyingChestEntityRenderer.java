@@ -35,20 +35,20 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
 
     public FlyingChestEntityRenderer(EntityRendererProvider.Context context) {
         super(context);
-        this.shadowRadius = 0.35F;
+        shadowRadius = 0.35F;
 
         ModelPart chestRoot = context.bakeLayer(ModelLayers.CHEST);
-        this.chestBase = chestRoot.getChild("bottom");
-        this.chestLid = chestRoot.getChild("lid");
-        this.chestLock = chestRoot.getChild("lock");
+        chestBase = chestRoot.getChild("bottom");
+        chestLid = chestRoot.getChild("lid");
+        chestLock = chestRoot.getChild("lock");
 
-        this.wingRenderers = new WingRenderer[]{
+        wingRenderers = new WingRenderer[]{
             new BeeWingRenderer(context),
             new AllayWingRenderer(context),
             new BatWingRenderer(context)
         };
 
-        this.destructionProgress = ((com.fjjy.mixin.client.LevelRendererAccessor) Minecraft.getInstance().levelRenderer).getDestructionProgress();
+        destructionProgress = ((com.fjjy.mixin.client.LevelRendererAccessor) Minecraft.getInstance().levelRenderer).getDestructionProgress();
     }
 
     @Override
@@ -92,13 +92,13 @@ public class FlyingChestEntityRenderer extends EntityRenderer<FlyingChestEntity,
         poseStack.scale(0.63F, 0.63F, 0.63F);
         poseStack.translate(-0.5, 0.4, -0.5);
         var chestRenderType = RenderTypes.entitySolid(FlyingChestClientConfig.resolveChestTexture());
-        this.chestLid.resetPose();
-        this.chestLock.resetPose();
-        this.chestLid.xRot = -(float) (Math.PI / 2.0) * state.lidAngle;
-        this.chestLock.xRot = this.chestLid.xRot;
-        submitNodeCollector.submitModelPart(this.chestBase, poseStack, chestRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
-        submitNodeCollector.submitModelPart(this.chestLid, poseStack, chestRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
-        submitNodeCollector.submitModelPart(this.chestLock, poseStack, chestRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
+        chestLid.resetPose();
+        chestLock.resetPose();
+        chestLid.xRot = -(float) (Math.PI / 2.0) * state.lidAngle;
+        chestLock.xRot = chestLid.xRot;
+        submitNodeCollector.submitModelPart(chestBase, poseStack, chestRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
+        submitNodeCollector.submitModelPart(chestLid, poseStack, chestRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
+        submitNodeCollector.submitModelPart(chestLock, poseStack, chestRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, null);
 
         // replicating block breaking overlay: 6 flat quads, one per face, with the 16x16 destroy_stage texture
         if (state.breakStage > 0) {

@@ -77,9 +77,9 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 	}
 
 	public void setActiveOwner(@Nullable Player player) {
-		if (this.level().isClientSide()) throw new IllegalStateException("setActiveOwner must only be called on the server");
-		this.activeOwner = player;
-		this.entityData.set(IS_ACTIVE, player != null);
+		if (level().isClientSide()) throw new IllegalStateException("setActiveOwner must only be called on the server");
+		activeOwner = player;
+		entityData.set(IS_ACTIVE, player != null);
 	}
 
 	@Override
@@ -94,41 +94,41 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 
 	@Nullable
 	public UUID getOwnerUuid() {
-		String s = this.entityData.get(OWNER_UUID);
+		String s = entityData.get(OWNER_UUID);
 		return s.isEmpty() ? null : UUID.fromString(s);
 	}
 
 	public void setOwnerUuid(@Nullable UUID uuid) {
-		this.entityData.set(OWNER_UUID, uuid == null ? "" : uuid.toString());
+		entityData.set(OWNER_UUID, uuid == null ? "" : uuid.toString());
 	}
 
 	public boolean isActive() {
-		return this.entityData.get(IS_ACTIVE);
+		return entityData.get(IS_ACTIVE);
 	}
 
 	@Override
 	public Direction getBaseDirection() {
-		return Direction.from3DDataValue(this.entityData.get(BASE_DIRECTION));
+		return Direction.from3DDataValue(entityData.get(BASE_DIRECTION));
 	}
 
 	public void setBaseDirection(Direction dir) {
-		this.entityData.set(BASE_DIRECTION, (byte) dir.get3DDataValue());
+		entityData.set(BASE_DIRECTION, (byte) dir.get3DDataValue());
 	}
 
 	@Override
 	public boolean isDocked() {
-		return this.entityData.get(IS_DOCKED);
+		return entityData.get(IS_DOCKED);
 	}
 
 	public void setDocked(boolean docked) {
-		this.entityData.set(IS_DOCKED, docked);
-		if (!this.level().isClientSide()) {
-			Vec3 bsp = this.getBaseStationPos();
+		entityData.set(IS_DOCKED, docked);
+		if (!level().isClientSide()) {
+			Vec3 bsp = getBaseStationPos();
 			if (bsp != null) {
 				BlockPos blockPos = BlockPos.containing(bsp);
-				BlockState state = this.level().getBlockState(blockPos);
+				BlockState state = level().getBlockState(blockPos);
 				if (state.hasProperty(FlyingChestBlock.IS_DOCKED)) {
-					this.level().setBlockAndUpdate(blockPos, state.setValue(FlyingChestBlock.IS_DOCKED, docked));
+					level().setBlockAndUpdate(blockPos, state.setValue(FlyingChestBlock.IS_DOCKED, docked));
 				}
 			}
 		}
@@ -137,37 +137,37 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 	@Override
 	public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
 		super.onSyncedDataUpdated(key);
-		if (key.equals(IS_ACTIVE) && this.level().isClientSide() && onActiveStateChanged != null) {
+		if (key.equals(IS_ACTIVE) && level().isClientSide() && onActiveStateChanged != null) {
 			onActiveStateChanged.accept(this);
 		}
 	}
 
 	@Override
 	protected void registerGoals() {
-		this.goalSelector.addGoal(0, new FollowOwnerGoal());
-		this.goalSelector.addGoal(1, new ReturnToBaseGoal());
+		goalSelector.addGoal(0, new FollowOwnerGoal());
+		goalSelector.addGoal(1, new ReturnToBaseGoal());
 	}
 
 	public void openCombinedInventory(ServerPlayer player) {
-		this.openingManager.openCombined(player);
+		openingManager.openCombined(player);
 	}
 
 	public void openInventory(ServerPlayer player) {
-		this.openingManager.openRegular(player);
+		openingManager.openRegular(player);
 	}
 
 	@Override
 	public boolean isPickable() {
-		return !this.isDocked() && allowRightClickWhileFlying.getAsBoolean();
+		return !isDocked() && allowRightClickWhileFlying.getAsBoolean();
 	}
 
 	public Vec3 getBaseStationPos() {
-		Vector3fc v = this.entityData.get(BASE_STATION_POS);
+		Vector3fc v = entityData.get(BASE_STATION_POS);
 		return Float.isNaN(v.y()) ? null : new Vec3(v.x(), v.y(), v.z());
 	}
 
 	private void setBaseStationPos(Vec3 pos) {
-		this.entityData.set(BASE_STATION_POS, new Vector3f((float)pos.x, (float)pos.y, (float)pos.z));
+		entityData.set(BASE_STATION_POS, new Vector3f((float)pos.x, (float)pos.y, (float)pos.z));
 	}
 
 	@Override
@@ -187,11 +187,11 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 	@Override
 	protected void addAdditionalSaveData(ValueOutput output) {
 		super.addAdditionalSaveData(output);
-		Vec3 bsp = this.getBaseStationPos();
+		Vec3 bsp = getBaseStationPos();
 		if (bsp != null) output.store("BaseStationPos", Vec3.CODEC, bsp);
-		output.store("IsDocked", Codec.BOOL, this.isDocked());
-		output.store("BaseDirection", Codec.BYTE, (byte) this.getBaseDirection().get3DDataValue());
-		UUID ownerUuid = this.getOwnerUuid();
+		output.store("IsDocked", Codec.BOOL, isDocked());
+		output.store("BaseDirection", Codec.BYTE, (byte) getBaseDirection().get3DDataValue());
+		UUID ownerUuid = getOwnerUuid();
 		if (ownerUuid != null) output.store("OwnerUuid", Codec.STRING, ownerUuid.toString());
 	}
 
@@ -221,9 +221,9 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 	}
 
 	public void snapToBase() {
-		this.setPos(this.getBaseStationPos());
-		this.setDeltaMovement(Vec3.ZERO);
-		this.setDocked(true);
+		setPos(getBaseStationPos());
+		setDeltaMovement(Vec3.ZERO);
+		setDocked(true);
 	}
 
 	private boolean activeOwnerHasLosToBase() {
@@ -254,7 +254,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 
 		for (Vec3 target : targets) {
 			ClipContext ctx = new ClipContext(eye, target, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, activeOwner);
-			HitResult hit = this.level().clip(ctx);
+			HitResult hit = level().clip(ctx);
 			// Targets are inside the block — hitting basePos means the ray reached it unobstructed
 			if (hit.getType() == HitResult.Type.MISS
 					|| (hit instanceof BlockHitResult bhr && bhr.getBlockPos().equals(basePos))) {
@@ -266,9 +266,9 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 
 	private boolean activeOwnerHasLosToBaseCached() {
 		if (activeOwner == null) return false;
-		if (this.level().getGameTime() >= activeOwnerHasLosToBaseCacheTick + ACTIVE_OWNER_HAS_LOS_TO_BASE_TICK_INTERVAL) {
+		if (level().getGameTime() >= activeOwnerHasLosToBaseCacheTick + ACTIVE_OWNER_HAS_LOS_TO_BASE_TICK_INTERVAL) {
 			activeOwnerHasLosToBaseCache = activeOwnerHasLosToBase();
-			activeOwnerHasLosToBaseCacheTick = (int) this.level().getGameTime();
+			activeOwnerHasLosToBaseCacheTick = (int) level().getGameTime();
 		}
 		return activeOwnerHasLosToBaseCache;
 	}
@@ -280,8 +280,8 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 		private boolean lookAtOwner = false;
 
 		private FollowOwnerGoal() {
-			this.rng = getRandom();
-			this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+			rng = getRandom();
+			setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
 		}
 
 		@Override
@@ -293,7 +293,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 
 		@Override
 		public void start() {
-			this.ticksRemaining = 0;
+			ticksRemaining = 0;
 			setDocked(false);
 		}
 
@@ -304,13 +304,13 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 
 		@Override
 		public void tick() {
-			if (--this.ticksRemaining <= 0) {
-				this.ticksRemaining = calculateTicksRemaining();
+			if (--ticksRemaining <= 0) {
+				ticksRemaining = calculateTicksRemaining();
 				updateDirection();
 				// chance to look at owner (instead of the target)
-				this.lookAtOwner = this.rng.nextInt(3) == 0; // 1 in 3
+				lookAtOwner = rng.nextInt(3) == 0; // 1 in 3
 			}
-			if (this.lookAtOwner) {
+			if (lookAtOwner) {
 				getLookControl().setLookAt(activeOwner, 45.0F, 90.0F);
 			}
 		}
@@ -320,14 +320,14 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 				Vec3 currentTarget = getCurrentTarget();
 				if (
 					activeOwner.distanceToSqr(currentTarget) < 16.0D
-					&& this.rng.nextBoolean()
-					&& !this.skippedPrevDirectionUpdate
+					&& rng.nextBoolean()
+					&& !skippedPrevDirectionUpdate
 					&& !isWithinOwnerNarrowFov(activeOwner, currentTarget)
 				) {
-					this.skippedPrevDirectionUpdate = true;
+					skippedPrevDirectionUpdate = true;
 					return;
 				} else {
-					this.skippedPrevDirectionUpdate = false;
+					skippedPrevDirectionUpdate = false;
 				}
 			}
 
@@ -339,7 +339,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 				target = target.add(0.0D, 2.0D, 0.0D);
 
 				//apply gaussian blur
-				target = target.add(this.rng.nextGaussian(), this.rng.nextGaussian(), this.rng.nextGaussian());
+				target = target.add(rng.nextGaussian(), rng.nextGaussian(), rng.nextGaussian());
 
 				// retry if target is blocking view of owner
 				if (!isWithinOwnerNarrowFov(activeOwner, target)) {
@@ -350,7 +350,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 			double distanceToTargetSqr = distanceToSqr(target);
 
 			//random speed boost gets fed in linearly before the sqrting so it doesn't effect top speed/long range paths
-			double speedBoost = this.rng.nextInt(8);
+			double speedBoost = rng.nextInt(8);
 			double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr + speedBoost)) / 2;
 
 			getNavigation().moveTo(target.x, target.y, target.z, speed);
@@ -361,7 +361,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 		 */
 		private Vec3 sampleCircle(Player owner, double radius) {
 			double yaw = Math.toRadians(owner.getYRot());
-			double theta = yaw + this.rng.nextDouble() * 2.0D * Math.PI;
+			double theta = yaw + rng.nextDouble() * 2.0D * Math.PI;
 			double dx = Math.cos(theta) * radius;
 			double dz = Math.sin(theta) * radius;
 			return new Vec3(owner.getX() + dx, owner.getY(), owner.getZ() + dz);
@@ -385,7 +385,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 			//max ticks before randomization, much higher when close
 			final int maxTicks = (int) (2048 / Math.pow(distSqr + 8, 2)) + minTicks / 2;
 			//randomize
-			return this.rng.nextInt(maxTicks + 1) + minTicks;
+			return rng.nextInt(maxTicks + 1) + minTicks;
 		}
 
 		private Vec3 getCurrentTarget() {
@@ -400,7 +400,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 	private final class ReturnToBaseGoal extends Goal {
 
 		private ReturnToBaseGoal() {
-			this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+			setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
 		}
 
 		@Override
