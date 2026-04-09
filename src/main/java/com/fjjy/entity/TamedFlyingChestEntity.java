@@ -63,9 +63,9 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 	public static Consumer<TamedFlyingChestEntity> onActiveStateChanged = null;
 	public static BooleanSupplier allowRightClickWhileFlying = () -> false;
 
-	private boolean	activeOwnerHasLosToBaseCache = false;
-	private int		activeOwnerHasLosToBaseCacheTick = 0;
-	private int		activeOwnerHasLosToBaseInterval = 10;
+	private boolean			activeOwnerHasLosToBaseCache = false;
+	private int				activeOwnerHasLosToBaseCacheTick = 0;
+	private final int		ACTIVE_OWNER_HAS_LOS_TO_BASE_TICK_INTERVAL = 10;
 
 	public TamedFlyingChestEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
 		super(entityType, level);
@@ -144,8 +144,8 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 
 	@Override
 	protected void registerGoals() {
-		this.goalSelector.addGoal(0, new FollowOwnerGoal(this));
-		this.goalSelector.addGoal(1, new ReturnToBaseGoal(this));
+		this.goalSelector.addGoal(0, new FollowOwnerGoal());
+		this.goalSelector.addGoal(1, new ReturnToBaseGoal());
 	}
 
 	public void openCombinedInventory(ServerPlayer player) {
@@ -266,42 +266,40 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 
 	private boolean activeOwnerHasLosToBaseCached() {
 		if (activeOwner == null) return false;
-		if (this.level().getGameTime() >= activeOwnerHasLosToBaseCacheTick + activeOwnerHasLosToBaseInterval) {
+		if (this.level().getGameTime() >= activeOwnerHasLosToBaseCacheTick + ACTIVE_OWNER_HAS_LOS_TO_BASE_TICK_INTERVAL) {
 			activeOwnerHasLosToBaseCache = activeOwnerHasLosToBase();
 			activeOwnerHasLosToBaseCacheTick = (int) this.level().getGameTime();
 		}
 		return activeOwnerHasLosToBaseCache;
 	}
 
-	private static final class FollowOwnerGoal extends Goal {
-		private final TamedFlyingChestEntity mob;
+	private final class FollowOwnerGoal extends Goal {
 		private int ticksRemaining;
 		private boolean skippedPrevDirectionUpdate = false;
 		private final RandomSource rng;
 		private boolean lookAtOwner = false;
 
-		private FollowOwnerGoal(TamedFlyingChestEntity mob) {
-			this.mob = mob;
-			this.rng = mob.getRandom();
+		private FollowOwnerGoal() {
+			this.rng = getRandom();
 			this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
 		}
 
 		@Override
 		public boolean canUse() {
-			return this.mob.activeOwnerHasLosToBaseCached()
-				? this.mob.activeOwner.distanceToSqr(this.mob.getBaseStationPos()) > 20.0D
-				: this.mob.activeOwner != null; // if we don't have LOS but the owner is still in range, 
+			return activeOwnerHasLosToBaseCached()
+				? activeOwner.distanceToSqr(getBaseStationPos()) > 20.0D
+				: activeOwner != null; // if we don't have LOS but the owner is still in range, 
 		}
 
 		@Override
 		public void start() {
 			this.ticksRemaining = 0;
-			this.mob.setDocked(false);
+			setDocked(false);
 		}
 
 		@Override
 		public void stop() {
-			this.mob.getNavigation().stop();
+			getNavigation().stop();
 		}
 
 		@Override
@@ -313,7 +311,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 				this.lookAtOwner = this.rng.nextInt(3) == 0; // 1 in 3
 			}
 			if (this.lookAtOwner) {
-				this.mob.getLookControl().setLookAt(this.mob.activeOwner, 45.0F, 90.0F);
+				getLookControl().setLookAt(activeOwner, 45.0F, 90.0F);
 			}
 		}
 
@@ -321,10 +319,10 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 			{// if target/mob is close to player and not blocking their narrow fov, theres a chance to linger
 				Vec3 currentTarget = getCurrentTarget();
 				if (
-					this.mob.activeOwner.distanceToSqr(currentTarget) < 16.0D
+					activeOwner.distanceToSqr(currentTarget) < 16.0D
 					&& this.rng.nextBoolean()
 					&& !this.skippedPrevDirectionUpdate
-					&& !isWithinOwnerNarrowFov(this.mob.activeOwner, currentTarget)
+					&& !isWithinOwnerNarrowFov(activeOwner, currentTarget)
 				) {
 					this.skippedPrevDirectionUpdate = true;
 					return;
@@ -335,7 +333,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 
 			Vec3 target = null;
 			for (int i = 0; i < 3; i++) {
-				target = sampleCircle(this.mob.activeOwner, 2.5D);
+				target = sampleCircle(activeOwner, 2.5D);
 
 				//shift up from players feet
 				target = target.add(0.0D, 2.0D, 0.0D);
@@ -344,18 +342,18 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 				target = target.add(this.rng.nextGaussian(), this.rng.nextGaussian(), this.rng.nextGaussian());
 
 				// retry if target is blocking view of owner
-				if (!isWithinOwnerNarrowFov(this.mob.activeOwner, target)) {
+				if (!isWithinOwnerNarrowFov(activeOwner, target)) {
 					break;
 				}
 			}
 
-			double distanceToTargetSqr = this.mob.distanceToSqr(target);
+			double distanceToTargetSqr = distanceToSqr(target);
 
 			//random speed boost gets fed in linearly before the sqrting so it doesn't effect top speed/long range paths
 			double speedBoost = this.rng.nextInt(8);
 			double speed = Math.sqrt(Math.sqrt(distanceToTargetSqr + speedBoost)) / 2;
 
-			this.mob.getNavigation().moveTo(target.x, target.y, target.z, speed);
+			getNavigation().moveTo(target.x, target.y, target.z, speed);
 		}
 
 		/**
@@ -381,7 +379,7 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 		}
 
 		private int calculateTicksRemaining() {
-			final double distSqr = this.mob.activeOwner.distanceToSqr(getCurrentTarget());
+			final double distSqr = activeOwner.distanceToSqr(getCurrentTarget());
 			//minimum ticks, half of this is also added pre randomization so distant points still get some randomization
 			final int minTicks = 10;
 			//max ticks before randomization, much higher when close
@@ -391,45 +389,45 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 		}
 
 		private Vec3 getCurrentTarget() {
-			BlockPos targetPos = this.mob.getNavigation().getTargetPos();
+			BlockPos targetPos = getNavigation().getTargetPos();
 			if (targetPos == null) {
-				targetPos = this.mob.blockPosition();
+				targetPos = blockPosition();
 			}
 			return Vec3.atCenterOf(targetPos);
 		}
 	}
 
-	private static final class ReturnToBaseGoal extends Goal {
-		private final TamedFlyingChestEntity mob;
+	private final class ReturnToBaseGoal extends Goal {
 
-		private ReturnToBaseGoal(TamedFlyingChestEntity mob) {
-			this.mob = mob;
+		private ReturnToBaseGoal() {
 			this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
 		}
 
 		@Override
 		public boolean canUse() {
-			return !this.mob.isDocked() && this.mob.activeOwnerHasLosToBaseCached();
+			// we don't need range/los checks because the follow owner goal does that and has priority
+			// the goal is completed by docking so we can stop when docked
+			return !isDocked();
 		}
 
 		@Override
 		public void tick() {
 			// Snap to base station position when docking finishes
-			if (!this.mob.getNavigation().isInProgress()) {
-				this.mob.snapToBase();
+			if (!getNavigation().isInProgress()) {
+				snapToBase();
 			}
 		}
 
 		@Override
 		public void start() {
 			double speed = 2.9D;
-			Vec3 bsp = this.mob.getBaseStationPos();
-			if (bsp != null) this.mob.getNavigation().moveTo(bsp.x, bsp.y, bsp.z, speed);
+			Vec3 bsp = getBaseStationPos();
+			if (bsp != null) getNavigation().moveTo(bsp.x, bsp.y, bsp.z, speed);
 		}
 
 		@Override
 		public void stop() {
-			this.mob.getNavigation().stop();
+			getNavigation().stop();
 		}
 	}
 }
