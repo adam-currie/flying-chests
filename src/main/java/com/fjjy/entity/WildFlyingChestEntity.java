@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 
 import com.fjjy.config.FlyingChestServerConfig;
 
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -132,4 +133,16 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
             CLIENT_BREAK_METHOD.invoke(null, this);
         } catch (Throwable ignored) {}
     }
+
+    @Override
+	public boolean hurtServer(ServerLevel level, DamageSource damageSource, float amount) {
+		if (damageSource.is(DamageTypes.GENERIC_KILL)) {
+            // comes from things like /kill so we want to respect it
+			performBreak(level);
+			return true;
+		} else {
+            // any normal damage should be ignored
+			return false;
+		}
+	}
 }

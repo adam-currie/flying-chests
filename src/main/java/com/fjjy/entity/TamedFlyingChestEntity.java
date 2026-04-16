@@ -22,6 +22,8 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -204,6 +206,11 @@ public class TamedFlyingChestEntity extends FlyingChestEntity {
 			.ifPresent(b -> setBaseDirection(Direction.from3DDataValue(b)));
 		input.read("OwnerUuid", Codec.STRING)
 			.ifPresent(s -> setOwnerUuid(UUID.fromString(s)));
+	}
+
+	@Override
+	public boolean hurtServer(ServerLevel level, DamageSource damageSource, float amount) {
+		return false; // we aren't a normal entity and don't want to be hurt by anything normal even /kill (generally)
 	}
 
 	public static TamedFlyingChestEntity spawnFromPlacement(ServerLevel level, BlockPos baseStationPos, Direction facing) {
