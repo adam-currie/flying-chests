@@ -1,25 +1,29 @@
 package com.fjjy.entity;
 
 import java.lang.reflect.Method;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
 import com.fjjy.config.FlyingChestServerConfig;
+import com.fjjy.Util;
 
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomFlyingGoal;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 public class WildFlyingChestEntity extends FlyingChestEntity {
 
@@ -68,8 +72,106 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
     }
 
     @Override
+    protected PathNavigation createNavigation(Level level) {
+        FleeFlyingPathNavigation nav = new FleeFlyingPathNavigation(this, level);
+        nav.setCanOpenDoors(false);
+        nav.setCanFloat(true);
+        nav.setRequiredPathLength(48.0F);
+        return nav;
+    }
+
+    @Override
     protected void registerGoals() {
-        goalSelector.addGoal(0, new WaterAvoidingRandomFlyingGoal(this, 1.0));
+        goalSelector.addGoal(0, new FleeGoal());
+        //debug goalSelector.addGoal(1, new WaterAvoidingRandomFlyingGoal(this, 1.0));
+    }
+
+    private class FleeGoal extends Goal {
+        private double fleeThreshold = 100;
+        private Vec3 weightedAvgThreatPos = Vec3.ZERO;
+        private ThreatComponent shortTermThreat = new ThreatComponent(0, 2, .87, 0);
+        private ThreatComponent longTermThreat = new ThreatComponent(0, 1, .97, 0);
+
+        private static class ThreatComponent {
+            private final double softCap;
+            private final double inputScale;
+            private final double constantDecay;
+            private final double decayFactor;
+            private double value = 0;
+
+            ThreatComponent(double softCap, double inputScale, double decayFactor, double constantDecay) {
+                this.softCap = softCap;
+                this.inputScale = inputScale;
+                this.decayFactor = decayFactor;
+                this.constantDecay = constantDecay;
+            }
+            
+            /**
+             * Gets the current value.
+             * The softcap does not apply unless {@link #decay()} is called after {@link #add(double)}
+             * and before this method.
+             */
+            double get() {
+                return value;
+            }
+
+            void add(double amount) {
+                value += amount * inputScale;
+            }
+
+            void decay() {
+                // scale down excess above soft cap
+                double excess = Math.max(0, value - softCap);
+                value = excess * decayFactor + (value - excess);
+
+                // constant decay
+                value -= constantDecay;
+                value = Math.max(value, 0);
+            }
+        }
+
+        FleeGoal() {
+            setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            // numerator for weighted avg threat position
+            Vec3 threatPosSum = Vec3.ZERO;
+            // denominator for the weighted avg threat position
+            double threatPosWeightsSum = 0;
+
+            AABB searchBox = AABB.ofSize(position(), 1, 1, 1).inflate(16.0D);
+            for (ServerPlayer player : level().getEntitiesOfClass(ServerPlayer.class, searchBox)) {
+                double proximity = 100.0 / Math.max(2, distanceToSqr(player));
+                double velocity = Util.fastApproxSqrt(player.getDeltaMovement().lengthSqr());
+                    
+                shortTermThreat.add(proximity);
+                longTermThreat.add(velocity * Util.fastApproxSqrt(proximity));
+
+                double weight = proximity;
+                threatPosSum = threatPosSum.add(player.getEyePosition().scale(weight));
+                threatPosWeightsSum += weight;
+            }
+
+            shortTermThreat.decay();
+            longTermThreat.decay();
+
+            if (threatPosWeightsSum == 0) {
+                // no players, no threat
+                return false;
+            } else {
+                weightedAvgThreatPos = threatPosSum.scale(1 / threatPosWeightsSum);
+                return shortTermThreat.get() *  longTermThreat.get() > fleeThreshold;
+            }
+        }
+
+        @Override
+        public void tick() {
+            if (navigation.isDone()) {
+                ((FleeFlyingPathNavigation) navigation).moveFrom(weightedAvgThreatPos, 16f, 2.8f);
+            }
+        }
     }
 
     public void onBreakStart(ServerPlayer player) {

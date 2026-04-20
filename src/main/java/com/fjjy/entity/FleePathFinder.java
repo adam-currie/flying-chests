@@ -1,0 +1,242 @@
+package com.fjjy.entity;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.function.BooleanSupplier;
+
+import com.fjjy.Util;
+import com.fjjy.mixin.PathAccessor;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.PathNavigationRegion;
+import net.minecraft.world.level.pathfinder.BinaryHeap;
+import net.minecraft.world.level.pathfinder.Node;
+import net.minecraft.world.level.pathfinder.NodeEvaluator;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.level.pathfinder.PathFinder;
+import net.minecraft.world.level.pathfinder.Target;
+import net.minecraft.world.phys.Vec3;
+
+/**
+ * Augments Pathfinder to temporarily avoid a threat instead of targeting a fixed goal.
+ */
+public class FleePathFinder extends PathFinder {
+    private final NodeEvaluator nodeEvaluator;
+    private final BinaryHeap openSet = new BinaryHeap();
+    private final Node[] neighbors = new Node[32];
+
+    private int maxNodes;
+    private Vec3 threatPos = Vec3.ZERO;
+    private float fStopThreshold;
+    private float goalDistance;
+    private boolean fleeMode = false;
+    private BooleanSupplier captureDebug = () -> false;
+
+    public FleePathFinder(NodeEvaluator nodeEvaluator, int maxNodes) {
+        super(nodeEvaluator, maxNodes);
+        this.nodeEvaluator = nodeEvaluator;
+        this.maxNodes = maxNodes;
+    }
+
+    @Override
+    public void setMaxVisitedNodes(int maxVisitedNodes) {
+        super.setMaxVisitedNodes(maxVisitedNodes);
+        maxNodes = maxVisitedNodes;
+    }
+
+    @Override
+    public void setCaptureDebug(BooleanSupplier captureDebug) {
+        super.setCaptureDebug(captureDebug);
+        this.captureDebug = captureDebug;
+    }
+
+    /*
+     * Evaluates a node for flee path finding based on its distance from a threat.
+     */
+    private float threatCost(Node node) {
+        float x = Math.abs((float)(node.x + .5 - threatPos.x));
+        float z = Math.abs((float)(node.z + .5 - threatPos.z));
+        return 128f/(x*x + z*z + 6f);
+    }
+
+    /*
+     * Calculates the approximate euclidean distance from the threat,
+     * scaled up a bit to account for error and err on the side of fleeing further.
+     */
+    private float threatDistance(Node node) {
+        float x = Math.abs((float)(node.x + .5 - threatPos.x));
+        float z = Math.abs((float)(node.z + .5 - threatPos.z));
+        return Util.fastApproxSqrt(x*x + z*z) * 1.2f;
+    }
+
+    /**
+     * Enables flee mode with the given threat position and goal distance,
+     * temporarily augmenting pathfinding to avoid the threat instead of targeting a fixed goal.
+     * 
+     * @param threatPos the position to flee from
+     * @param goalDistance after this distance the pathfinder will stop searching,
+     * but this is a lower bound because traversal cost will be factored in and
+     * effectively increasing the distance goal beyond this.
+     * if the entity is 5 blocks away and then moves directly away unimpeded,
+     * the actual goal distance will be around the same as the lower bound.
+     */
+    public void startFleeing(Vec3 threatPos, float goalDistance) {
+        this.threatPos = threatPos;
+        this.goalDistance = goalDistance;
+        this.fleeMode = true;
+    }
+
+    public void stopFleeing() {
+        this.fleeMode = false;
+    }
+
+    /**
+     * Distance between neighboring nodes, used to calculate g score of a path.
+     * For non neighbors the result may not be useful.
+     */
+    private float getNeighborDistance(Node a, Node b) {
+        final float[] diagonalFactors = {1, (float)Math.sqrt(2), (float)Math.sqrt(3)};
+        int dy = Math.abs(b.y - a.y);
+        int dx = Math.abs(b.x - a.x);
+        int dz = Math.abs(b.z - a.z);
+        int diagonalicity = (dx != 0 ? 1 : 0) + 
+                            (dy != 0 ? 1 : 0) + 
+                            (dz != 0 ? 1 : 0) - 1;
+        return diagonalFactors[diagonalicity];
+    }
+
+    private void initStopThreshold(float goalDistance, Node start) {
+        //todo: update, this is the old way we dont use getTargetAvoidanceGCostTerm anymore
+        // simulate calculating f for ideal case path
+        // float g = 0; 
+        // int h = -5; 
+        // while (h-- > -goalDistance) g += 1 + getTargetAvoidanceGCostTerm(h); 
+        // this.fStopThreshold = g + h * FINAL_SCORE_TARGET_DIST_WEIGHT; 
+    }
+
+    /**
+     * Fleeing is driven by flee parameters set via {@link #startFleeing}.
+     * Call stopFleeing() to return to normal pathfinding behavior.
+     * Uses a heavily modified version of A* that avoids a position instead of targeting a position.
+     */
+    @Override
+    public Path findPath(
+        PathNavigationRegion region,
+        Mob mob,
+        Set<BlockPos> targets,
+        float maxPathLength,
+        int reachRange,
+        float maxVisitedNodesMultiplier
+    ) {
+        if (!fleeMode) {
+            return super.findPath(region, mob, targets, maxPathLength, reachRange, maxVisitedNodesMultiplier);
+        }
+        openSet.clear();
+        nodeEvaluator.prepare(region, mob);
+        Node best = nodeEvaluator.getStart();
+        if (best == null) {
+            nodeEvaluator.done();
+            return null;
+        }
+
+        //todo: Dry (similar to 2 other places below in same method)
+        best.h = threatCost(best);
+        best.g = // g is the cost, excluding threat distance cost of the path to this point
+                (best.costMalus + 1) // per node cost...
+                // ...normally this is scaled by distance from prev node,
+                // but we dont have a prev node and we also need to just make this a heuristic element
+                // anyway as it's only purpose is adjusting how likely the entity is to just stay put
+                * threatCost(best);//todo: scalar on this + a constant probably
+        best.f = best.g - threatDistance(best);
+        openSet.insert(best);
+
+        initStopThreshold(goalDistance, best);
+
+        int maxVisitedNodesAdjusted = (int)(this.maxNodes * maxVisitedNodesMultiplier * 2); // *2 because we need more for fleeing since its open ended
+        boolean doCapture = captureDebug.getAsBoolean();
+        Set<Node> closedSet = doCapture ? new HashSet<>() : Set.of();
+
+        for (int i = 0; i < maxVisitedNodesAdjusted && !openSet.isEmpty(); i++) {
+            Node current = openSet.pop();
+            current.closed = true;
+            if (doCapture) closedSet.add(current);
+
+            // once a node closed, it's f is no longer for queue order 
+            // and is instead just used for choosing a destination node 
+            // so now we incorporate accumulated threat cost into f which we left out while in the open set.
+            current.f = current.f + current.h;
+
+            if (current.f > best.f) {
+                best = current;
+                if (current.f <= fStopThreshold) {
+                    break;
+                }
+            }
+
+            int neighborCount = nodeEvaluator.getNeighbors(neighbors, current);// todo: 26 - neighborCount tells you the number of blocked adjacent nodes which can be used to avoid them (increase cost)
+            for (int n = 0; n < neighborCount; n++) {
+                Node neighbor = neighbors[n];
+                if (neighbor == null || neighbor.closed || neighbor.costMalus < 0.0f) {
+                    continue;
+                }
+
+                //debug: ignore vertical moves
+                if (neighbor.y != current.y) {
+                    continue;
+                }
+
+                float threatDistance = threatDistance(neighbor);
+                float threatCost = threatCost(neighbor);
+                float accumulatedH = current.h + threatCost;
+                float g = // g is the cost, excluding threat distance cost of the path to this point
+                    current.g + // existing cost of the path
+                        (neighbor.costMalus + 1) // per node cost...
+                        * getNeighborDistance(current, neighbor);// ...scaled by length to account for more distance traveled on diagonals
+                if (neighbor.inOpenSet()) {
+                    // for choosing cameFrom we want to consider the actual cost of the path,
+                    // not ignoring accumulated threat cost like we do for f values in the open set.
+                    // in the open set we ignore accumulated threat cost so that scanning order is
+                    // more focused on just fleeing directly away 
+                    // (more efficient than breadth-first which would be the effective scanning order if we included accumulated threat costs in f for open set popping)
+                    if (g + accumulatedH < neighbor.g + neighbor.h) {
+                        neighbor.cameFrom = current;
+                        neighbor.g = g;
+                        neighbor.h = accumulatedH;
+                        openSet.changeCost(neighbor, g - threatDistance);
+                    }
+                } else {
+                    //todo: DRY this (similar to above)
+                    neighbor.cameFrom = current;
+                    neighbor.g = g;
+                    neighbor.h = accumulatedH;
+                    neighbor.f = g - threatDistance;
+                    openSet.insert(neighbor);
+                }
+            }
+        }
+
+        Target fakeTarget = doCapture ? nodeEvaluator.getTarget(best.x, best.y, best.z) : null;
+        nodeEvaluator.done();
+        Path result = reconstructPath(best);
+        if (doCapture) {
+            fakeTarget.setReached();
+            ((PathAccessor)(Object) result).invokeSetDebug(openSet.getHeap(), closedSet.toArray(Node[]::new), Set.of(fakeTarget));
+        }
+        return result;
+    }
+
+    private Path reconstructPath(Node end) {
+        List<Node> nodes = new ArrayList<>();
+        Node node = end;
+        nodes.add(0, end);
+        while (node.cameFrom != null) {
+            nodes.add(0, node.cameFrom);
+            node = node.cameFrom;
+        }
+        return new Path(nodes, end.asBlockPos(), nodes.size() > 1);
+    }
+
+}

@@ -32,6 +32,17 @@ loom {
 		}
 	}
 
+	runs {
+		client {
+			vmArgs "-DMC_DEBUG_ENABLED",
+			       "-DMC_DEBUG_PATHFINDING=true",
+			       "-DMC_DEBUG_GOAL_SELECTOR=true",
+			       "-DMC_DEBUG_BRAIN=true",
+			       "-DMC_DEBUG_SHOW_LOCAL_SERVER_ENTITY_HIT_BOXES=true",
+			       "-DMC_DEBUG_SHOW_SERVER_DEBUG_VALUES=true"
+		}
+	}
+
 }
 
 dependencies {
@@ -44,6 +55,9 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	modImplementation "me.fzzyhmstrs:fzzy_config:${project.fzzy_config_version}"
+
+	// Dev-only: mods in build/libs for testing config screen
+	modLocalRuntime fileTree(dir: 'build/libs', include: ['modmenu-*.jar'])
 	
 }
 

@@ -3,6 +3,7 @@
 	"package": "com.fjjy.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
+		"PathAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1
