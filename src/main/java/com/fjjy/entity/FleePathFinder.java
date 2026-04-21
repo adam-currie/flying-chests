@@ -1,11 +1,13 @@
 package com.fjjy.entity;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 
+import com.fjjy.FlyingChests;
 import com.fjjy.Util;
 import com.fjjy.mixin.PathAccessor;
 
@@ -109,19 +111,17 @@ public class FleePathFinder extends PathFinder {
         this.fleeMode = false;
     }
 
+    private static final float[] DIAGONAL_FACTORS = {1f, (float)Math.sqrt(2), (float)Math.sqrt(3)};
+
     /**
      * Distance between neighboring nodes, used to calculate g score of a path.
      * For non neighbors the result may not be useful.
      */
-    private float getNeighborDistance(Node a, Node b) {
-        final float[] diagonalFactors = {1, (float)Math.sqrt(2), (float)Math.sqrt(3)};
-        int dy = Math.abs(b.y - a.y);
-        int dx = Math.abs(b.x - a.x);
-        int dz = Math.abs(b.z - a.z);
-        int diagonalicity = (dx != 0 ? 1 : 0) + 
-                            (dy != 0 ? 1 : 0) + 
-                            (dz != 0 ? 1 : 0) - 1;
-        return diagonalFactors[diagonalicity];
+    private static float getNeighborDistance(Node a, Node b) {
+        int diagonalicity = (a.x != b.x ? 1 : 0) +
+                            (a.y != b.y ? 1 : 0) +
+                            (a.z != b.z ? 1 : 0) - 1;
+        return DIAGONAL_FACTORS[diagonalicity];
     }
 
     private float scanningOrderFitness(float g, float threatDistance) {
@@ -156,6 +156,7 @@ public class FleePathFinder extends PathFinder {
         if (!fleeMode) {
             return super.findPath(region, mob, targets, maxPathLength, reachRange, maxVisitedNodesMultiplier);
         }
+        long startNs = System.nanoTime();
         openSet.clear();
         nodeEvaluator.prepare(region, mob);
         Node best = nodeEvaluator.getStart();
@@ -233,6 +234,7 @@ public class FleePathFinder extends PathFinder {
             }
         }
 
+        FlyingChests.LOGGER.info("FleePathFinder.findPath took {} us", (System.nanoTime() - startNs) / 1000);
         Target fakeTarget = doCapture ? nodeEvaluator.getTarget(best.x, best.y, best.z) : null;
         nodeEvaluator.done();
         Path result = reconstructPath(best);
@@ -245,12 +247,10 @@ public class FleePathFinder extends PathFinder {
 
     private Path reconstructPath(Node end) {
         List<Node> nodes = new ArrayList<>();
-        Node node = end;
-        nodes.add(0, end);
-        while (node.cameFrom != null) {
-            nodes.add(0, node.cameFrom);
-            node = node.cameFrom;
+        for (Node node = end; node != null; node = node.cameFrom) {
+            nodes.add(node);
         }
+        Collections.reverse(nodes);
         return new Path(nodes, end.asBlockPos(), nodes.size() > 1);
     }
 
