@@ -44,7 +44,6 @@ public class FleePathFinder extends PathFinder {
 
     private int maxNodes;
     private Vec3 threatPos = Vec3.ZERO;
-    private float fStopThreshold;
     private float goalDistance;
     private boolean fleeMode = false;
     private BooleanSupplier captureDebug = () -> false;
@@ -67,23 +66,26 @@ public class FleePathFinder extends PathFinder {
         this.captureDebug = captureDebug;
     }
 
+    private float threatCost(float threatDistanceSqr) {
+        return 128f/(threatDistanceSqr + 6f);        
+    }
+
     /*
      * Evaluates a node for flee path finding based on its distance from a threat.
      */
     private float threatCost(Node node) {
         float x = Math.abs((float)(node.x + .5 - threatPos.x));
         float z = Math.abs((float)(node.z + .5 - threatPos.z));
-        return 128f/(x*x + z*z + 6f);
+        return threatCost(x*x + z*z);
     }
 
     /*
-     * Calculates the approximate euclidean distance from the threat,
-     * scaled up a bit to account for error and err on the side of fleeing further.
+     * Calculates the approximate euclidean distance from the threat.
      */
     private float threatDistance(Node node) {
         float x = Math.abs((float)(node.x + .5 - threatPos.x));
         float z = Math.abs((float)(node.z + .5 - threatPos.z));
-        return Util.fastApproxSqrt(x*x + z*z) * 1.2f;
+        return Util.fastApproxSqrt(x*x + z*z);
     }
 
     /**
@@ -122,13 +124,19 @@ public class FleePathFinder extends PathFinder {
         return diagonalFactors[diagonalicity];
     }
 
-    private void initStopThreshold(float goalDistance, Node start) {
-        //todo: update, this is the old way we dont use getTargetAvoidanceGCostTerm anymore
-        // simulate calculating f for ideal case path
-        // float g = 0; 
-        // int h = -5; 
-        // while (h-- > -goalDistance) g += 1 + getTargetAvoidanceGCostTerm(h); 
-        // this.fStopThreshold = g + h * FINAL_SCORE_TARGET_DIST_WEIGHT; 
+    private float scanningOrderFitness(float g, float threatDistance) {
+        return g - threatDistance*1.2f; // distance is scaled up a bit to account for sqrt error and err on the side of fleeing further. 
+    }
+
+    private void initFirstNodeWeights(Node start) {
+        start.h = threatCost(start);
+        start.g = // g is the cost, excluding threat distance cost of the path to this point
+                (start.costMalus + 1) // per node cost...
+                // ...normally this is scaled by distance from prev node,
+                // but we dont have a prev node and we also need to just make this a heuristic element
+                // anyway as it's only purpose is adjusting how likely the entity is to just stay put
+                * threatCost(start);//todo: scalar on this + a constant probably
+        start.f = scanningOrderFitness(start.g, threatDistance(start));
     }
 
     /**
@@ -156,18 +164,8 @@ public class FleePathFinder extends PathFinder {
             return null;
         }
 
-        //todo: Dry (similar to 2 other places below in same method)
-        best.h = threatCost(best);
-        best.g = // g is the cost, excluding threat distance cost of the path to this point
-                (best.costMalus + 1) // per node cost...
-                // ...normally this is scaled by distance from prev node,
-                // but we dont have a prev node and we also need to just make this a heuristic element
-                // anyway as it's only purpose is adjusting how likely the entity is to just stay put
-                * threatCost(best);//todo: scalar on this + a constant probably
-        best.f = best.g - threatDistance(best);
+        initFirstNodeWeights(best);
         openSet.insert(best);
-
-        initStopThreshold(goalDistance, best);
 
         int maxVisitedNodesAdjusted = (int)(this.maxNodes * maxVisitedNodesMultiplier * 2); // *2 because we need more for fleeing since its open ended
         boolean doCapture = captureDebug.getAsBoolean();
@@ -181,11 +179,14 @@ public class FleePathFinder extends PathFinder {
             // once a node closed, it's f is no longer for queue order 
             // and is instead just used for choosing a destination node 
             // so now we incorporate accumulated threat cost into f which we left out while in the open set.
+            float openF = current.f;
             current.f = current.f + current.h;
 
             if (current.f > best.f) {
                 best = current;
-                if (current.f <= fStopThreshold) {
+                // f is already initialized to g - threatDistance so we can extract that back here.
+                float threatDistance = best.g - openF;
+                if (threatDistance > goalDistance) {
                     break;
                 }
             }
@@ -202,13 +203,13 @@ public class FleePathFinder extends PathFinder {
                     continue;
                 }
 
-                float threatDistance = threatDistance(neighbor);
                 float threatCost = threatCost(neighbor);
                 float accumulatedH = current.h + threatCost;
                 float g = // g is the cost, excluding threat distance cost of the path to this point
                     current.g + // existing cost of the path
                         (neighbor.costMalus + 1) // per node cost...
                         * getNeighborDistance(current, neighbor);// ...scaled by length to account for more distance traveled on diagonals
+                float scanningOrderFitness = scanningOrderFitness(g, threatDistance(neighbor));
                 if (neighbor.inOpenSet()) {
                     // for choosing cameFrom we want to consider the actual cost of the path,
                     // not ignoring accumulated threat cost like we do for f values in the open set.
@@ -219,14 +220,14 @@ public class FleePathFinder extends PathFinder {
                         neighbor.cameFrom = current;
                         neighbor.g = g;
                         neighbor.h = accumulatedH;
-                        openSet.changeCost(neighbor, g - threatDistance);
+                        openSet.changeCost(neighbor, scanningOrderFitness);
                     }
                 } else {
                     //todo: DRY this (similar to above)
                     neighbor.cameFrom = current;
                     neighbor.g = g;
                     neighbor.h = accumulatedH;
-                    neighbor.f = g - threatDistance;
+                    neighbor.f = scanningOrderFitness;
                     openSet.insert(neighbor);
                 }
             }
