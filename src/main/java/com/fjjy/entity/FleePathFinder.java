@@ -24,6 +24,20 @@ import net.minecraft.world.phys.Vec3;
  * Augments Pathfinder to temporarily avoid a threat instead of targeting a fixed goal.
  */
 public class FleePathFinder extends PathFinder {
+    // we use the Node class a little differently than A*:
+    // +---------------------+------------------------+---------------+-----------------+-------------+
+    // | Node      |         |                        |                                               |
+    // +-----------+         |                        | Used for choosing...                          |
+    // | Property            | Description            +-----------------------------------------------+
+    // |                     |                        | Node.cameFrom | Scanning Order  | destination |
+    // +---------------------+------------------------+---------------+-----------------+-------------+
+    // | Node.g              | full path travel cost  |      Yes      |       Yes       |     Yes     |
+    // | Node.h              | full path threat cost  |      Yes      |       No        |     Yes     | 
+    // | Node.f (open node)  | scanning order fitness |      No       |       Yes       |     No      |
+    // | Node.f (closed node)| destination fitness    |      No       |       No        |     Yes     |
+    // +---------------------+------------------------+---------------+-----------------+-------------+
+    // Node.f has to be updated when closing a node to reflect its new purpose.
+
     private final NodeEvaluator nodeEvaluator;
     private final BinaryHeap openSet = new BinaryHeap();
     private final Node[] neighbors = new Node[32];
