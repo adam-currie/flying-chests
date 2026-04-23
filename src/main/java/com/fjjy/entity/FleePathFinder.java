@@ -111,7 +111,7 @@ public class FleePathFinder extends PathFinder {
         this.fleeMode = false;
     }
 
-    private static final float[] DIAGONAL_FACTORS = {1f, (float)Math.sqrt(2), (float)Math.sqrt(3)};
+    private static final float[] DIAGONAL_FACTORS = {0, 1f, (float)Math.sqrt(2), (float)Math.sqrt(3)};
 
     /**
      * Distance between neighboring nodes, used to calculate g score of a path.
@@ -120,7 +120,7 @@ public class FleePathFinder extends PathFinder {
     private static float getNeighborDistance(Node a, Node b) {
         int diagonalicity = (a.x != b.x ? 1 : 0) +
                             (a.y != b.y ? 1 : 0) +
-                            (a.z != b.z ? 1 : 0) - 1;
+                            (a.z != b.z ? 1 : 0);
         return DIAGONAL_FACTORS[diagonalicity];
     }
 
@@ -185,7 +185,7 @@ public class FleePathFinder extends PathFinder {
 
             if (current.f > best.f) {
                 best = current;
-                // f is already initialized to g - threatDistance so we can extract that back here.
+                // f is already initialized to g - threatDistance so we can get threatDistance back here.
                 float threatDistance = best.g - openF;
                 if (threatDistance > goalDistance) {
                     break;
@@ -196,11 +196,6 @@ public class FleePathFinder extends PathFinder {
             for (int n = 0; n < neighborCount; n++) {
                 Node neighbor = neighbors[n];
                 if (neighbor == null || neighbor.closed || neighbor.costMalus < 0.0f) {
-                    continue;
-                }
-
-                //debug: ignore vertical moves
-                if (neighbor.y != current.y) {
                     continue;
                 }
 
