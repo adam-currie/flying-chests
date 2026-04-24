@@ -136,12 +136,14 @@ public class FleePathFinder extends PathFinder {
     }
 
     private void initFirstNode(Node start) {
+        float threatDistance = threatDistance(start);
         start.h = threatCost(start);
         start.g = // g is the cost, excluding threat distance cost of the path to this point
                 (start.costMalus + 1); // per node cost...
                 // ...normally this is scaled by distance from prev node,
                 // but we dont have a prev node
-        start.f = scanningOrderFitness(start.g, threatDistance(start));
+        start.f = scanningOrderFitness(start.g, threatDistance);
+        start.walkedDistance = threatDistance;
     }
 
     /**
