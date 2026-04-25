@@ -24,21 +24,24 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Augments Pathfinder to temporarily avoid a threat instead of targeting a fixed goal.
+ * <p>
+ * We use {@link Node} fields a little differently than A*:
+ * <pre>
+ * +----------------------------+-----------------------+---------------------+-----------------+------------+
+ * | Node      |                |                       |                                                    |
+ * +-----------+                |                       | Used for choosing...                               |
+ * | Property                   | Description           +----------------------------------------------------+
+ * |                            |                       |{@link Node#cameFrom}| Scanning Order | destination |
+ * +----------------------------+-----------------------+---------------------+----------------+-------------+
+ * | {@link Node#g}             | full path travel cost |         Yes         |       Yes      |     Yes     |
+ * | {@link Node#h}             | full path threat cost |         Yes         |       No       |     Yes     |
+ * | {@link Node#f}             | scanning order fitness|         No          |       Yes      |     No      |
+ * | {@link Node#walkedDistance}| threat distance       |         No          |       Yes      |     Yes     |
+ * +----------------------------+-----------------------+---------------------+----------------+-------------+
+ * note: lower is better (f,g,h,final fitness value).
+ * </pre>
  */
 public class FleePathFinder extends PathFinder {
-    // we use the Node class a little differently than A*:
-    // +---------------------+------------------------+---------------+-----------------+-------------+
-    // | Node      |         |                        |                                               |
-    // +-----------+         |                        | Used for choosing...                          |
-    // | Property            | Description            +-----------------------------------------------+
-    // |                     |                        | Node.cameFrom | Scanning Order  | destination |
-    // +---------------------+------------------------+---------------+-----------------+-------------+
-    // | Node.g              | full path travel cost  |      Yes      |       Yes       |     Yes     |
-    // | Node.h              | full path threat cost  |      Yes      |       No        |     Yes     | 
-    // | Node.f              | scanning order fitness |      No       |       Yes       |     No      |
-    // | Node.walkedDistance | threat distance        |      No       |       Yes       |     Yes     |
-    // +---------------------+------------------------+---------------+-----------------+-------------+
-    // note: lower is better (f,g,h,final fitness value).
 
     private final NodeEvaluator nodeEvaluator;
     private final BinaryHeap openSet = new BinaryHeap();
@@ -132,7 +135,7 @@ public class FleePathFinder extends PathFinder {
     }
 
     private float destinationFitness(Node node) {
-        return node.g + node.h - node.walkedDistance*16;
+        return node.g + node.h - node.walkedDistance*32;
     }
 
     private void initFirstNode(Node start) {
