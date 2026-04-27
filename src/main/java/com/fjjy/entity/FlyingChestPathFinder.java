@@ -206,35 +206,25 @@ public class FlyingChestPathFinder extends PathFinder {
                         (neighbor.costMalus + 1) // per node cost...
                         * getNeighborDistance(current, neighbor);// ...scaled by length to account for more distance traveled on diagonals
                 float scanningOrderFitness = scanningOrderFitness(g, threatDistance);
-                if (neighbor.inOpenSet()) {
+
+                // if this node is new or better than before
+                if (!neighbor.inOpenSet() || g + h < neighbor.g + neighbor.h) {
                     // for choosing cameFrom we want to consider the actual cost of the path,
                     // not ignoring accumulated threat cost like we do for f values in the open set.
                     // in the open set we ignore accumulated threat cost so that scanning order is
                     // more focused on just fleeing directly away 
                     // (more efficient than breadth-first which would be the effective scanning order if we included accumulated threat costs in f for open set popping)
-                    if (g + h < neighbor.g + neighbor.h) {
-                        neighbor.cameFrom = current;
-                        neighbor.g = g;
-                        neighbor.h = h;
-                        openSet.changeCost(neighbor, scanningOrderFitness);
-                        float destFitness = destinationFitness(g, h, threatDistance);
-                        if (destFitness < bestFitness) {
-                            best = neighbor;
-                            bestFitness = destFitness;
-                            if (threatDistance > goalDistance) {
-                                // stop outer loop next iteration, but keep checking neighbors in case we find a better one
-                                // otherwise we would finish on a sub-optimal diagonal a lot of the time
-                                i = maxVisitedNodesAdjusted;
-                            }
-                        }
-                    }
-                } else {
-                    //todo: DRY this (similar to above)
                     neighbor.cameFrom = current;
                     neighbor.g = g;
                     neighbor.h = h;
-                    neighbor.f = scanningOrderFitness;
-                    openSet.insert(neighbor);
+
+                    if (neighbor.inOpenSet()) {
+                        openSet.changeCost(neighbor, scanningOrderFitness);
+                    } else {
+                        neighbor.f = scanningOrderFitness;
+                        openSet.insert(neighbor);
+                    }
+
                     float destFitness = destinationFitness(g, h, threatDistance);
                     if (destFitness < bestFitness) {
                         best = neighbor;
