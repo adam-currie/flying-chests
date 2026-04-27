@@ -128,7 +128,7 @@ public class FleePathFinder extends PathFinder {
     }
 
     // distance is scaled up a bit to account for sqrt error and err on the side of fleeing further. 
-    private static float THREAT_DISTANCE_FACTOR = 1.2f;
+    private static final float THREAT_DISTANCE_FACTOR = 1.2f;
 
     private float scanningOrderFitness(float g, float threatDistance) {
         return g - threatDistance*THREAT_DISTANCE_FACTOR; 
