@@ -119,161 +119,161 @@ public class FlyingChestNodeEvaluator extends NodeEvaluator {
         }
 
         Node southUp = this.findAcceptedNode(pos.x, pos.y + 1, pos.z + 1);
-        if (this.isOpen(southUp) && this.hasMalus(south) && this.hasMalus(up)) {
+        if (this.isOpen(southUp) && hasMalus(south) && hasMalus(up)) {
             neighbors[count++] = southUp;
         }
 
         Node westUp = this.findAcceptedNode(pos.x - 1, pos.y + 1, pos.z);
-        if (this.isOpen(westUp) && this.hasMalus(west) && this.hasMalus(up)) {
+        if (this.isOpen(westUp) && hasMalus(west) && hasMalus(up)) {
             neighbors[count++] = westUp;
         }
 
         Node eastUp = this.findAcceptedNode(pos.x + 1, pos.y + 1, pos.z);
-        if (this.isOpen(eastUp) && this.hasMalus(east) && this.hasMalus(up)) {
+        if (this.isOpen(eastUp) && hasMalus(east) && hasMalus(up)) {
             neighbors[count++] = eastUp;
         }
 
         Node northUp = this.findAcceptedNode(pos.x, pos.y + 1, pos.z - 1);
-        if (this.isOpen(northUp) && this.hasMalus(north) && this.hasMalus(up)) {
+        if (this.isOpen(northUp) && hasMalus(north) && hasMalus(up)) {
             neighbors[count++] = northUp;
         }
 
         Node southDown = this.findAcceptedNode(pos.x, pos.y - 1, pos.z + 1);
-        if (this.isOpen(southDown) && this.hasMalus(south) && this.hasMalus(down)) {
+        if (this.isOpen(southDown) && hasMalus(south) && hasMalus(down)) {
             neighbors[count++] = southDown;
         }
 
         Node westDown = this.findAcceptedNode(pos.x - 1, pos.y - 1, pos.z);
-        if (this.isOpen(westDown) && this.hasMalus(west) && this.hasMalus(down)) {
+        if (this.isOpen(westDown) && hasMalus(west) && hasMalus(down)) {
             neighbors[count++] = westDown;
         }
 
         Node eastDown = this.findAcceptedNode(pos.x + 1, pos.y - 1, pos.z);
-        if (this.isOpen(eastDown) && this.hasMalus(east) && this.hasMalus(down)) {
+        if (this.isOpen(eastDown) && hasMalus(east) && hasMalus(down)) {
             neighbors[count++] = eastDown;
         }
 
         Node northDown = this.findAcceptedNode(pos.x, pos.y - 1, pos.z - 1);
-        if (this.isOpen(northDown) && this.hasMalus(north) && this.hasMalus(down)) {
+        if (this.isOpen(northDown) && hasMalus(north) && hasMalus(down)) {
             neighbors[count++] = northDown;
         }
 
         Node northEast = this.findAcceptedNode(pos.x + 1, pos.y, pos.z - 1);
-        if (this.isOpen(northEast) && this.hasMalus(north) && this.hasMalus(east)) {
+        if (this.isOpen(northEast) && hasMalus(north) && hasMalus(east)) {
             neighbors[count++] = northEast;
         }
 
         Node southEast = this.findAcceptedNode(pos.x + 1, pos.y, pos.z + 1);
-        if (this.isOpen(southEast) && this.hasMalus(south) && this.hasMalus(east)) {
+        if (this.isOpen(southEast) && hasMalus(south) && hasMalus(east)) {
             neighbors[count++] = southEast;
         }
 
         Node northWest = this.findAcceptedNode(pos.x - 1, pos.y, pos.z - 1);
-        if (this.isOpen(northWest) && this.hasMalus(north) && this.hasMalus(west)) {
+        if (this.isOpen(northWest) && hasMalus(north) && hasMalus(west)) {
             neighbors[count++] = northWest;
         }
 
         Node southWest = this.findAcceptedNode(pos.x - 1, pos.y, pos.z + 1);
-        if (this.isOpen(southWest) && this.hasMalus(south) && this.hasMalus(west)) {
+        if (this.isOpen(southWest) && hasMalus(south) && hasMalus(west)) {
             neighbors[count++] = southWest;
         }
 
         Node northEastUp = this.findAcceptedNode(pos.x + 1, pos.y + 1, pos.z - 1);
         if (this.isOpen(northEastUp)
-                && this.hasMalus(northEast)
-                && this.hasMalus(north)
-                && this.hasMalus(east)
-                && this.hasMalus(up)
-                && this.hasMalus(northUp)
-                && this.hasMalus(eastUp)) {
+                && hasMalus(northEast)
+                && hasMalus(north)
+                && hasMalus(east)
+                && hasMalus(up)
+                && hasMalus(northUp)
+                && hasMalus(eastUp)) {
             neighbors[count++] = northEastUp;
         }
 
         Node southEastUp = this.findAcceptedNode(pos.x + 1, pos.y + 1, pos.z + 1);
         if (this.isOpen(southEastUp)
-                && this.hasMalus(southEast)
-                && this.hasMalus(south)
-                && this.hasMalus(east)
-                && this.hasMalus(up)
-                && this.hasMalus(southUp)
-                && this.hasMalus(eastUp)) {
+                && hasMalus(southEast)
+                && hasMalus(south)
+                && hasMalus(east)
+                && hasMalus(up)
+                && hasMalus(southUp)
+                && hasMalus(eastUp)) {
             neighbors[count++] = southEastUp;
         }
 
         Node northWestUp = this.findAcceptedNode(pos.x - 1, pos.y + 1, pos.z - 1);
         if (this.isOpen(northWestUp)
-                && this.hasMalus(northWest)
-                && this.hasMalus(north)
-                && this.hasMalus(west)
-                && this.hasMalus(up)
-                && this.hasMalus(northUp)
-                && this.hasMalus(westUp)) {
+                && hasMalus(northWest)
+                && hasMalus(north)
+                && hasMalus(west)
+                && hasMalus(up)
+                && hasMalus(northUp)
+                && hasMalus(westUp)) {
             neighbors[count++] = northWestUp;
         }
 
         Node southWestUp = this.findAcceptedNode(pos.x - 1, pos.y + 1, pos.z + 1);
         if (this.isOpen(southWestUp)
-                && this.hasMalus(southWest)
-                && this.hasMalus(south)
-                && this.hasMalus(west)
-                && this.hasMalus(up)
-                && this.hasMalus(southUp)
-                && this.hasMalus(westUp)) {
+                && hasMalus(southWest)
+                && hasMalus(south)
+                && hasMalus(west)
+                && hasMalus(up)
+                && hasMalus(southUp)
+                && hasMalus(westUp)) {
             neighbors[count++] = southWestUp;
         }
 
         Node northEastDown = this.findAcceptedNode(pos.x + 1, pos.y - 1, pos.z - 1);
         if (this.isOpen(northEastDown)
-                && this.hasMalus(northEast)
-                && this.hasMalus(north)
-                && this.hasMalus(east)
-                && this.hasMalus(down)
-                && this.hasMalus(northDown)
-                && this.hasMalus(eastDown)) {
+                && hasMalus(northEast)
+                && hasMalus(north)
+                && hasMalus(east)
+                && hasMalus(down)
+                && hasMalus(northDown)
+                && hasMalus(eastDown)) {
             neighbors[count++] = northEastDown;
         }
 
         Node southEastDown = this.findAcceptedNode(pos.x + 1, pos.y - 1, pos.z + 1);
         if (this.isOpen(southEastDown)
-                && this.hasMalus(southEast)
-                && this.hasMalus(south)
-                && this.hasMalus(east)
-                && this.hasMalus(down)
-                && this.hasMalus(southDown)
-                && this.hasMalus(eastDown)) {
+                && hasMalus(southEast)
+                && hasMalus(south)
+                && hasMalus(east)
+                && hasMalus(down)
+                && hasMalus(southDown)
+                && hasMalus(eastDown)) {
             neighbors[count++] = southEastDown;
         }
 
         Node northWestDown = this.findAcceptedNode(pos.x - 1, pos.y - 1, pos.z - 1);
         if (this.isOpen(northWestDown)
-                && this.hasMalus(northWest)
-                && this.hasMalus(north)
-                && this.hasMalus(west)
-                && this.hasMalus(down)
-                && this.hasMalus(northDown)
-                && this.hasMalus(westDown)) {
+                && hasMalus(northWest)
+                && hasMalus(north)
+                && hasMalus(west)
+                && hasMalus(down)
+                && hasMalus(northDown)
+                && hasMalus(westDown)) {
             neighbors[count++] = northWestDown;
         }
 
         Node southWestDown = this.findAcceptedNode(pos.x - 1, pos.y - 1, pos.z + 1);
         if (this.isOpen(southWestDown)
-                && this.hasMalus(southWest)
-                && this.hasMalus(south)
-                && this.hasMalus(west)
-                && this.hasMalus(down)
-                && this.hasMalus(southDown)
-                && this.hasMalus(westDown)) {
+                && hasMalus(southWest)
+                && hasMalus(south)
+                && hasMalus(west)
+                && hasMalus(down)
+                && hasMalus(southDown)
+                && hasMalus(westDown)) {
             neighbors[count++] = southWestDown;
         }
 
         return count;
     }
 
-    private boolean hasMalus(final @Nullable Node node) {
+    private static boolean hasMalus(final @Nullable Node node) {
         return node != null && node.costMalus >= 0.0F;
     }
 
-    private boolean isOpen(final @Nullable Node node) {
+    private static boolean isOpen(final @Nullable Node node) {
         return node != null && !node.closed;
     }
 
