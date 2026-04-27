@@ -36,7 +36,7 @@ import net.minecraft.world.phys.Vec3;
  * | {@link Node#g}             | full path travel cost |         Yes         |       Yes      |     Yes     |
  * | {@link Node#h}             | full path threat cost |         Yes         |       No       |     Yes     |
  * | {@link Node#f}             | scanning order fitness|         No          |       Yes      |     No      |
- * | {@link Node#walkedDistance}| threat distance       |         No          |       Yes      |     Yes     |
+ * | {@link Node#walkedDistance}| todo                  |         No          |       no       |     no      |
  * +----------------------------+-----------------------+---------------------+----------------+-------------+
  * note: lower is better (f,g,h,final fitness value).
  * </pre>
@@ -134,11 +134,15 @@ public class FlyingChestPathFinder extends PathFinder {
         return g - threatDistance*THREAT_DISTANCE_FACTOR; 
     }
 
-    private float destinationFitness(Node node) {
-        return node.g + node.h - node.walkedDistance*32;
+    private float destinationFitness(float g, float h, float threatDistance) {
+        return g + h - threatDistance*32;
     }
 
-    private void initFirstNode(Node start) {
+    /**
+     * Initializes the first node for fleeing.
+     * @return Destination fitness of the starting node.
+     */
+    private float initFirstNode(Node start) {
         float threatDistance = threatDistance(start);
         start.h = threatCost(start);
         start.g = // g is the cost, excluding threat distance cost of the path to this point
@@ -146,7 +150,7 @@ public class FlyingChestPathFinder extends PathFinder {
                 // ...normally this is scaled by distance from prev node,
                 // but we dont have a prev node
         start.f = scanningOrderFitness(start.g, threatDistance);
-        start.walkedDistance = threatDistance;
+        return destinationFitness(start.g, start.h, threatDistance);
     }
 
     /**
@@ -175,28 +179,17 @@ public class FlyingChestPathFinder extends PathFinder {
             return null;
         }
 
-        initFirstNode(best);
+        float bestFitness = initFirstNode(best);
         openSet.insert(best);
 
         int maxVisitedNodesAdjusted = (int)(this.maxNodes * maxVisitedNodesMultiplier * 2); // *2 because we need more for fleeing since its open ended
         boolean doCapture = captureDebug.getAsBoolean();
         Set<Node> closedSet = doCapture ? new HashSet<>() : Set.of();
 
-        float bestFitness = destinationFitness(best);
-
         for (int i = 0; i < maxVisitedNodesAdjusted && !openSet.isEmpty(); i++) {
             Node current = openSet.pop();
             current.closed = true;
             if (doCapture) closedSet.add(current);
-
-            float currentDestinationFitness = destinationFitness(current);
-            if (currentDestinationFitness < bestFitness) {
-                best = current;
-                bestFitness = currentDestinationFitness;
-                if (best.walkedDistance > goalDistance) {
-                    break;
-                }
-            }
 
             int neighborCount = nodeEvaluator.getNeighbors(neighbors, current);// todo: 26 - neighborCount tells you the number of blocked adjacent nodes which can be used to avoid them (increase cost)
             for (int n = 0; n < neighborCount; n++) {
@@ -223,17 +216,35 @@ public class FlyingChestPathFinder extends PathFinder {
                         neighbor.cameFrom = current;
                         neighbor.g = g;
                         neighbor.h = h;
-                        neighbor.walkedDistance = threatDistance;
                         openSet.changeCost(neighbor, scanningOrderFitness);
+                        float destFitness = destinationFitness(g, h, threatDistance);
+                        if (destFitness < bestFitness) {
+                            best = neighbor;
+                            bestFitness = destFitness;
+                            if (threatDistance > goalDistance) {
+                                // stop outer loop next iteration, but keep checking neighbors in case we find a better one
+                                // otherwise we would finish on a sub-optimal diagonal a lot of the time
+                                i = maxVisitedNodesAdjusted;
+                            }
+                        }
                     }
                 } else {
                     //todo: DRY this (similar to above)
                     neighbor.cameFrom = current;
                     neighbor.g = g;
                     neighbor.h = h;
-                    neighbor.walkedDistance = threatDistance;
                     neighbor.f = scanningOrderFitness;
                     openSet.insert(neighbor);
+                    float destFitness = destinationFitness(g, h, threatDistance);
+                    if (destFitness < bestFitness) {
+                        best = neighbor;
+                        bestFitness = destFitness;
+                        if (threatDistance > goalDistance) {
+                            // stop outer loop next iteration, but keep checking neighbors in case we find a better one
+                            // otherwise we would finish on a sub-optimal diagonal a lot of the time
+                            i = maxVisitedNodesAdjusted;
+                        }
+                    }
                 }
             }
         }
