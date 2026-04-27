@@ -41,7 +41,7 @@ import net.minecraft.world.phys.Vec3;
  * note: lower is better (f,g,h,final fitness value).
  * </pre>
  */
-public class FleePathFinder extends PathFinder {
+public class FlyingChestPathFinder extends PathFinder {
 
     private final NodeEvaluator nodeEvaluator;
     private final BinaryHeap openSet = new BinaryHeap();
@@ -53,7 +53,7 @@ public class FleePathFinder extends PathFinder {
     private boolean fleeMode = false;
     private BooleanSupplier captureDebug = () -> false;
 
-    public FleePathFinder(NodeEvaluator nodeEvaluator, int maxNodes) {
+    public FlyingChestPathFinder(NodeEvaluator nodeEvaluator, int maxNodes) {
         super(nodeEvaluator, maxNodes);
         this.nodeEvaluator = nodeEvaluator;
         this.maxNodes = maxNodes;

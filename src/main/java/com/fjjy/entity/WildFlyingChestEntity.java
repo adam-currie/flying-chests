@@ -7,9 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import com.fjjy.config.FlyingChestServerConfig;
-import com.fjjy.Util;
-
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -20,10 +17,12 @@ import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+
+import com.fjjy.config.FlyingChestServerConfig;
+import com.fjjy.Util;
 
 public class WildFlyingChestEntity extends FlyingChestEntity {
 
@@ -69,15 +68,6 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
     @Override
     public boolean isPickable() {
         return true;
-    }
-
-    @Override
-    protected PathNavigation createNavigation(Level level) {
-        FleeFlyingPathNavigation nav = new FleeFlyingPathNavigation(this, level);
-        nav.setCanOpenDoors(false);
-        nav.setCanFloat(true);
-        nav.setRequiredPathLength(48.0F);
-        return nav;
     }
 
     @Override
@@ -169,7 +159,7 @@ public class WildFlyingChestEntity extends FlyingChestEntity {
         @Override
         public void tick() {
             if (navigation.isDone()) {
-                ((FleeFlyingPathNavigation) navigation).moveFrom(weightedAvgThreatPos, 16f, 2.8f);
+                ((FlyingChestPathNavigation) navigation).moveFrom(weightedAvgThreatPos, 12f, 2f);
             }
         }
     }

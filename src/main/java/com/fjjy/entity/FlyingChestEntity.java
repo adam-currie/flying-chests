@@ -21,7 +21,6 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
-import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -91,11 +90,11 @@ public abstract class FlyingChestEntity extends PathfinderMob {
 
 	@Override
 	protected PathNavigation createNavigation(Level level) {
-		FlyingPathNavigation pathNavigation = new FlyingPathNavigation(this, level);
-		pathNavigation.setCanOpenDoors(false);
-		pathNavigation.setCanFloat(true);
-		pathNavigation.setRequiredPathLength(48.0F);
-		return pathNavigation;
+		FlyingChestPathNavigation nav = new FlyingChestPathNavigation(this, level);
+		nav.setCanOpenDoors(false);
+		nav.setCanFloat(true);
+		nav.setRequiredPathLength(48.0F);
+		return nav;
 	}
 
 	@Override

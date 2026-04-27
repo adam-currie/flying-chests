@@ -4,23 +4,24 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.pathfinder.FlyNodeEvaluator;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.PathFinder;
 import net.minecraft.world.phys.Vec3;
 
-public class FleeFlyingPathNavigation extends FlyingPathNavigation {
-    private FleePathFinder fleePathFinder;
+import com.fjjy.entity.FlyingChestNodeEvaluator;
 
-    public FleeFlyingPathNavigation(Mob mob, Level level) {
+public class FlyingChestPathNavigation extends FlyingPathNavigation {
+    private FlyingChestPathFinder fleePathFinder;
+
+    public FlyingChestPathNavigation(Mob mob, Level level) {
         super(mob, level);
     }
 
     @Override
     protected PathFinder createPathFinder(int maxVisitedNodes) {
-        FlyNodeEvaluator evaluator = new FlyNodeEvaluator();
+        FlyingChestNodeEvaluator evaluator = new FlyingChestNodeEvaluator();
         this.nodeEvaluator = evaluator;
-        this.fleePathFinder = new FleePathFinder(evaluator, maxVisitedNodes);
+        this.fleePathFinder = new FlyingChestPathFinder(evaluator, maxVisitedNodes);
         return this.fleePathFinder;
     }
 
