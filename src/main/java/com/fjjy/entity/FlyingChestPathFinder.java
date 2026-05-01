@@ -16,7 +16,6 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.PathNavigationRegion;
 import net.minecraft.world.level.pathfinder.BinaryHeap;
 import net.minecraft.world.level.pathfinder.Node;
-import net.minecraft.world.level.pathfinder.NodeEvaluator;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.PathFinder;
 import net.minecraft.world.level.pathfinder.Target;
@@ -43,7 +42,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public class FlyingChestPathFinder extends PathFinder {
 
-    private final NodeEvaluator nodeEvaluator;
+    private final FlyingChestNodeEvaluator nodeEvaluator;
     private final BinaryHeap openSet = new BinaryHeap();
     private final Node[] neighbors = new Node[32];
 
@@ -53,7 +52,7 @@ public class FlyingChestPathFinder extends PathFinder {
     private boolean fleeMode = false;
     private BooleanSupplier captureDebug = () -> false;
 
-    public FlyingChestPathFinder(NodeEvaluator nodeEvaluator, int maxNodes) {
+    public FlyingChestPathFinder(FlyingChestNodeEvaluator nodeEvaluator, int maxNodes) {
         super(nodeEvaluator, maxNodes);
         this.nodeEvaluator = nodeEvaluator;
         this.maxNodes = maxNodes;
@@ -194,9 +193,6 @@ public class FlyingChestPathFinder extends PathFinder {
             int neighborCount = nodeEvaluator.getNeighbors(neighbors, current);// todo: 26 - neighborCount tells you the number of blocked adjacent nodes which can be used to avoid them (increase cost)
             for (int n = 0; n < neighborCount; n++) {
                 Node neighbor = neighbors[n];
-                if (neighbor == null || neighbor.closed || neighbor.costMalus < 0.0f) {
-                    continue;//todo: i think getNeighbors already handles everything and we can remove this
-                }
 
                 float threatCost = threatCost(neighbor);
                 float threatDistance = threatDistance(neighbor);
