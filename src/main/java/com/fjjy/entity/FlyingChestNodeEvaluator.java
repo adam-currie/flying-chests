@@ -277,6 +277,20 @@ public class FlyingChestNodeEvaluator extends NodeEvaluator {
         return node != null && !node.closed;
     }
 
+    public void initGroundHeight(final Node node) {
+        if (node.walkedDistance != 0) {
+            return;
+        }
+        PathType belowPathType = this.getCachedPathType(node.x, node.y - 1, node.z);
+        if (belowPathType.getMalus() == 0.0F) {
+            Node below = getNode(node.x, node.y - 1, node.z);
+            this.initGroundHeight(below);
+            node.walkedDistance = below.walkedDistance + 1;
+        } else {
+            node.walkedDistance = 1;
+        }
+    }
+
     protected @Nullable Node findAcceptedNode(final int x, final int y, final int z) {
         Node best = null;
         PathType pathType = this.getCachedPathType(x, y, z);
@@ -288,6 +302,7 @@ public class FlyingChestNodeEvaluator extends NodeEvaluator {
             if (pathType == PathType.WALKABLE) {
                 best.costMalus++;
             }
+            initGroundHeight(best);
         }
         return best;
     }
