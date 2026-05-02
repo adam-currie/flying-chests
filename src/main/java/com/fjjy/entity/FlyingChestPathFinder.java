@@ -194,6 +194,8 @@ public class FlyingChestPathFinder extends PathFinder {
             for (int n = 0; n < neighborCount; n++) {
                 Node neighbor = neighbors[n];
 
+                nodeEvaluator.initGroundHeight(neighbor);
+
                 float threatCost = threatCost(neighbor);
                 float threatDistance = threatDistance(neighbor);
                 float h = current.h + threatCost;

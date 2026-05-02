@@ -302,7 +302,6 @@ public class FlyingChestNodeEvaluator extends NodeEvaluator {
             if (pathType == PathType.WALKABLE) {
                 best.costMalus++;
             }
-            initGroundHeight(best);
         }
         return best;
     }
